@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>販売サイト</title>
+
+{% if design == "simple" %}
+<style>
+body { font-family: sans-serif; padding: 20px; background: white; color: black; }
+.card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 10px; }
+button { padding: 10px; border: none; background: #4CAF50; color: white; border-radius: 5px; }
+</style>
+{% else %}
+<style>
+body { font-family: sans-serif; padding: 20px; background: black; color: white; }
+.card { background: #222; padding: 10px; margin: 10px 0; border-radius: 10px; }
+button { padding: 10px; border: none; background: orange; color: black; border-radius: 5px; }
+</style>
+{% endif %}
+
+</head>
+<body>
+
+<h1>🛒 商品一覧</h1>
+<h2>💰 売上: {{ total_sales }}円</h2>
+
+<a href="/add"><button>＋ 商品追加</button></a>
+
+<br><br>
+
+<a href="/change_design/simple">シンプル</a> |
+<a href="/change_design/cool">かっこいい</a>
+
+{% for p in products %}
+<div class="card">
+  <h3>{{ p.name }}</h3>
+
+ {% if p.image %}
+  <img src="/static/uploads/{{ p.image }}" width="150">
+{% endif %}
+
+
+  <p>価格: {{ p.price }}円</p>
+  <p>在庫: {{ p.stock }}</p>
+  <p>売れた数: {{ p.sold }}</p>
+
+  <a href="/sell/{{ loop.index0 }}">
+    <button>売る</button>
+  </a>
+</div>
+{% endfor %}
+
+</body>
+</html>
