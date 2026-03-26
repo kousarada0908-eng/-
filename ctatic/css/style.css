@@ -1,0 +1,96 @@
+body {
+    font-family: sans-serif;
+    background: #f5f5f5;
+    margin: 0;
+}
+
+/* ヘッダー */
+.header {
+    background: linear-gradient(90deg, #333, #555);
+    color: white;
+    padding: 20px;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* 上部バー */
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    align-items: center;
+}
+
+/* カード配置 */
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+}
+
+/* 商品カード */
+.card {
+    background: white;
+    width: 200px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+.card-body {
+    padding: 10px;
+}
+
+/* ボタン */
+.btn {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    margin-top: 10px;
+    background: linear-gradient(45deg, #007bff, #00c6ff);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    opacity: 0.8;
+}
+
+/* フォーム */
+.form-container {
+    max-width: 400px;
+    margin: 30px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+}
+
+/* 戻るリンク */
+.back {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+}

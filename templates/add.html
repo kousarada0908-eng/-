@@ -3,20 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <title>商品追加</title>
+
+<link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body>
 
-<h1>商品追加</h1>
+<div class="header">
+    商品追加
+</div>
 
-<form method="post" enctype="multipart/form-data">
-  <p>画像URL: <input type="file" name="image"></p>
-  <p>名前: <input name="name"></p>
-  <p>価格: <input name="price" type="number"></p>
-  <p>在庫: <input name="stock" type="number"></p>
-  <button type="submit">追加</button>
+<div class="form-container">
+
+<form method="POST" enctype="multipart/form-data">
+
+    <label>商品名</label>
+    <input type="text" name="name" required>
+
+    <label>価格</label>
+    <input type="number" name="price" required>
+
+    <label>在庫</label>
+    <input type="number" name="stock" required>
+
+    <label>画像</label>
+    <input type="file" name="image">
+
+    <button type="submit" class="btn">追加</button>
+
 </form>
 
-<a href="/">戻る</a>
+<a href="/" class="back">← 戻る</a>
+
+</div>
 
 </body>
 </html>
