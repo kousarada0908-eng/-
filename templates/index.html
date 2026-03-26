@@ -18,6 +18,11 @@
     <a href="/add" class="btn">＋ 商品追加</a>
 </div>
 
+<!-- グラフ -->
+<div style="padding:20px;">
+    <canvas id="salesChart"></canvas>
+</div>
+
 <div class="container">
     {% for p in products %}
     <div class="card">
@@ -34,11 +39,34 @@
             <p>在庫: {{ p.stock }}</p>
 
             <a href="/sell/{{ loop.index0 }}" class="btn">売る</a>
+            <a href="/delete/{{ loop.index0 }}" class="btn delete">削除</a>
         </div>
 
     </div>
     {% endfor %}
 </div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- グラフ描画（VSコードエラー回避版） -->
+<script>
+const labels = JSON.parse('{{ names | tojson | safe }}');
+const data = JSON.parse('{{ sales | tojson | safe }}');
+
+const ctx = document.getElementById('salesChart');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: '販売数',
+            data: data
+        }]
+    }
+});
+</script>
 
 </body>
 </html>

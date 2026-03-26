@@ -7,7 +7,6 @@ app = Flask(__name__)
 
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # デザイン
@@ -30,19 +29,18 @@ products = load_data()
 @app.route("/")
 def index():
     total_sales = sum(p["price"] * p["sold"] for p in products)
+
+    names = [p["name"] for p in products]
+    sales = [p["sold"] for p in products]
+
     return render_template(
         "index.html",
         products=products,
         total_sales=total_sales,
-        design=design  
+        names=names,
+        sales=sales,
+        design=design
     )
-
-# デザイン切り替え
-@app.route("/change_design/<mode>")
-def change_design(mode):
-    global design
-    design = mode
-    return redirect("/")
 
 @app.route("/add", methods=["GET", "POST"])
 def add():
@@ -71,18 +69,22 @@ def add():
 
     return render_template("add.html")
 
-
-
 @app.route("/sell/<int:id>")
 def sell(id):
     if products[id]["stock"] > 0:
         products[id]["stock"] -= 1
         products[id]["sold"] += 1
         save_data()
-        
+    return redirect("/")
+
+# 🔥 削除機能
+@app.route("/delete/<int:id>")
+def delete(id):
+    if 0 <= id < len(products):
+        products.pop(id)
+        save_data()
     return redirect("/")
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
