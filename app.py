@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session
 from werkzeug.utils import secure_filename
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
+app.secret_key = "secret"  # ログイン用
 
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -24,12 +25,52 @@ def save_data():
 
 products = load_data()
 
+# 🔐 ログイン
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        if request.form["username"] == "admin" and request.form["password"] == "1234":
+            session["login"] = True
+            return redirect("/")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+# 📊 メイン
 @app.route("/")
 def index():
-    total_sales = sum(p["price"] * p["sold"] for p in products)
+    if not session.get("login"):
+        return redirect("/login")
 
-    names = [p["name"] for p in products]
-    sales = [p["sold"] for p in products]
+    period = request.args.get("period", "all")
+
+    today = datetime.now()
+
+    names = []
+    sales = []
+
+    for p in products:
+        total = 0
+        for h in p.get("history", []):
+            date = datetime.strptime(h["date"], "%Y-%m-%d")
+
+            if period == "1":
+                if date >= today - timedelta(days=1):
+                    total += 1
+            elif period == "3":
+                if date >= today - timedelta(days=3):
+                    total += 1
+            elif period == "7":
+                if date >= today - timedelta(days=7):
+                    total += 1
+            else:
+                total += 1
+
+        names.append(p["name"])
+        sales.append(total)
 
     ranking = sorted(
         products,
@@ -37,15 +78,19 @@ def index():
         reverse=True
     )
 
+    total_sales = sum(p["price"] * p["sold"] for p in products)
+
     return render_template(
         "index.html",
         products=products,
         total_sales=total_sales,
         names=names,
         sales=sales,
-        ranking=ranking
+        ranking=ranking,
+        period=period
     )
 
+# ➕ 追加
 @app.route("/add", methods=["GET", "POST"])
 def add():
     if request.method == "POST":
@@ -66,7 +111,7 @@ def add():
             "stock": stock,
             "sold": 0,
             "image": filename,
-            "history": []   # 履歴
+            "history": []
         })
 
         save_data()
@@ -74,6 +119,7 @@ def add():
 
     return render_template("add.html")
 
+# 💰 売る
 @app.route("/sell/<int:id>")
 def sell(id):
     if products[id]["stock"] > 0:
@@ -81,14 +127,14 @@ def sell(id):
         products[id]["sold"] += 1
 
         products[id]["history"].append({
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "price": products[id]["price"]
+            "date": datetime.now().strftime("%Y-%m-%d")
         })
 
         save_data()
 
     return redirect("/")
 
+# 🗑 削除
 @app.route("/delete/<int:id>")
 def delete(id):
     if 0 <= id < len(products):

@@ -16,18 +16,20 @@
 <div class="top-bar">
     <div>売上合計: ¥{{ total_sales }}</div>
     <a href="/add" class="btn">＋ 商品追加</a>
+    <a href="/logout" class="btn delete">ログアウト</a>
 </div>
 
-<!-- 目盛り切替 -->
+<!-- 期間フィルター -->
 <div style="text-align:center; margin:20px;">
-    <button onclick="updateStep(1)">1</button>
-    <button onclick="updateStep(5)">5</button>
-    <button onclick="updateStep(10)">10</button>
+    <a href="/?period=all" class="btn">全部</a>
+    <a href="/?period=1" class="btn">1日</a>
+    <a href="/?period=3" class="btn">3日</a>
+    <a href="/?period=7" class="btn">7日</a>
 </div>
 
 <!-- グラフ -->
 <div style="padding:20px; text-align:center;">
-    <canvas id="salesChart" style="max-width:800px;"></canvas>
+    <canvas id="salesChart" style="max-width:600px;"></canvas>
 </div>
 
 <!-- ランキング -->
@@ -40,6 +42,7 @@
     </ol>
 </div>
 
+<!-- 商品一覧 -->
 <div class="container">
     {% for p in products %}
     <div class="card">
@@ -63,41 +66,33 @@
     {% endfor %}
 </div>
 
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- 円グラフ -->
 <script>
 const labels = JSON.parse('{{ names | tojson | safe }}');
 const data = JSON.parse('{{ sales | tojson | safe }}');
 
 const ctx = document.getElementById('salesChart');
 
-let chart = new Chart(ctx, {
-    type: 'bar',
+new Chart(ctx, {
+    type: 'pie',
     data: {
         labels: labels,
         datasets: [{
-            label: '販売数',
-            data: data,
-            backgroundColor: 'rgba(0, 123, 255, 0.7)',
-            borderRadius: 8
+            data: data
         }]
     },
     options: {
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    stepSize: 1
-                }
+        plugins: {
+            title: {
+                display: true,
+                text: '期間別 売上割合'
             }
         }
     }
 });
-
-function updateStep(step) {
-    chart.options.scales.y.ticks.stepSize = step;
-    chart.update();
-}
 </script>
 
 </body>
