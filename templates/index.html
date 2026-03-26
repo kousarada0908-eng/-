@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>商品管理アプリ</title>
 
 <link rel="stylesheet" href="/static/css/style.css">
@@ -14,17 +15,7 @@
 </div>
 
 <div class="top-bar">
-    <div>売上合計: ¥{{ total_sales }}</div>
-    <a href="/add" class="btn">＋ 商品追加</a>
     <a href="/logout" class="btn delete">ログアウト</a>
-</div>
-
-<!-- 期間フィルター -->
-<div style="text-align:center; margin:20px;">
-    <a href="/?period=all" class="btn">全部</a>
-    <a href="/?period=1" class="btn">1日</a>
-    <a href="/?period=3" class="btn">3日</a>
-    <a href="/?period=7" class="btn">7日</a>
 </div>
 
 <!-- グラフ -->
@@ -32,14 +23,14 @@
     <canvas id="salesChart" style="max-width:600px;"></canvas>
 </div>
 
-<!-- ランキング -->
-<div style="padding:20px;">
-    <h2>売上ランキング</h2>
-    <ol>
-        {% for p in ranking %}
-        <li>{{ p.name }} - ¥{{ p.price * p.sold }}</li>
-        {% endfor %}
-    </ol>
+<!-- 商品追加 -->
+<div class="form-container">
+<form method="POST" action="/add">
+    <input type="text" name="name" placeholder="商品名" required>
+    <input type="number" name="price" placeholder="価格" required>
+    <input type="number" name="stock" placeholder="在庫" required>
+    <button type="submit" class="btn">追加</button>
+</form>
 </div>
 
 <!-- 商品一覧 -->
@@ -47,50 +38,32 @@
     {% for p in products %}
     <div class="card">
 
-        {% if p.image %}
-        <img src="/static/uploads/{{ p.image }}">
-        {% else %}
-        <img src="https://via.placeholder.com/200x150">
-        {% endif %}
-
         <div class="card-body">
             <h3>{{ p.name }}</h3>
             <p>¥{{ p.price }}</p>
             <p>在庫: {{ p.stock }}</p>
 
-            <a href="/sell/{{ loop.index0 }}" class="btn">売る</a>
-            <a href="/delete/{{ loop.index0 }}" class="btn delete">削除</a>
+            <a href="/sell/{{ p.id }}" class="btn">売る</a>
+            <a href="/delete/{{ p.id }}" class="btn delete">削除</a>
         </div>
 
     </div>
     {% endfor %}
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- 円グラフ -->
 <script>
 const labels = JSON.parse('{{ names | tojson | safe }}');
 const data = JSON.parse('{{ sales | tojson | safe }}');
 
-const ctx = document.getElementById('salesChart');
-
-new Chart(ctx, {
+new Chart(document.getElementById('salesChart'), {
     type: 'pie',
     data: {
         labels: labels,
         datasets: [{
             data: data
         }]
-    },
-    options: {
-        plugins: {
-            title: {
-                display: true,
-                text: '期間別 売上割合'
-            }
-        }
     }
 });
 </script>

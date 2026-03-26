@@ -1,145 +1,156 @@
 from flask import Flask, render_template, request, redirect, session
-from werkzeug.utils import secure_filename
-import json
+import sqlite3
 import os
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = "secret"  # ログイン用
+app.secret_key = "secret"
 
-UPLOAD_FOLDER = "static/uploads"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+DB = "app.db"
 
-DATA_FILE = "data.json"
+def get_db():
+    conn = sqlite3.connect(DB)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+# 初期化
+def init_db():
+    conn = get_db()
+    c = conn.cursor()
 
-def save_data():
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(products, f, ensure_ascii=False, indent=2)
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        password TEXT
+    )
+    """)
 
-products = load_data()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT,
+        price INTEGER,
+        stock INTEGER
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER,
+        date TEXT
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # 🔐 ログイン
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        if request.form["username"] == "admin" and request.form["password"] == "1234":
-            session["login"] = True
+        conn = get_db()
+        user = conn.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (request.form["username"], request.form["password"])
+        ).fetchone()
+
+        if user:
+            session["user_id"] = user["id"]
             return redirect("/")
+
     return render_template("login.html")
+
+# 新規登録
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            (request.form["username"], request.form["password"])
+        )
+        conn.commit()
+        return redirect("/login")
+
+    return render_template("register.html")
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
-# 📊 メイン
+# 🏠 メイン
 @app.route("/")
 def index():
-    if not session.get("login"):
+    if "user_id" not in session:
         return redirect("/login")
 
-    period = request.args.get("period", "all")
+    conn = get_db()
 
-    today = datetime.now()
+    products = conn.execute(
+        "SELECT * FROM products WHERE user_id=?",
+        (session["user_id"],)
+    ).fetchall()
 
     names = []
-    sales = []
+    sales_data = []
 
     for p in products:
-        total = 0
-        for h in p.get("history", []):
-            date = datetime.strptime(h["date"], "%Y-%m-%d")
-
-            if period == "1":
-                if date >= today - timedelta(days=1):
-                    total += 1
-            elif period == "3":
-                if date >= today - timedelta(days=3):
-                    total += 1
-            elif period == "7":
-                if date >= today - timedelta(days=7):
-                    total += 1
-            else:
-                total += 1
+        count = conn.execute(
+            "SELECT COUNT(*) FROM sales WHERE product_id=?",
+            (p["id"],)
+        ).fetchone()[0]
 
         names.append(p["name"])
-        sales.append(total)
-
-    ranking = sorted(
-        products,
-        key=lambda x: x["price"] * x["sold"],
-        reverse=True
-    )
-
-    total_sales = sum(p["price"] * p["sold"] for p in products)
+        sales_data.append(count)
 
     return render_template(
         "index.html",
         products=products,
-        total_sales=total_sales,
         names=names,
-        sales=sales,
-        ranking=ranking,
-        period=period
+        sales=sales_data
     )
 
-# ➕ 追加
-@app.route("/add", methods=["GET", "POST"])
+# ➕ 商品追加
+@app.route("/add", methods=["POST"])
 def add():
-    if request.method == "POST":
-        name = request.form["name"]
-        price = int(request.form["price"])
-        stock = int(request.form["stock"])
-
-        file = request.files.get("image")
-
-        filename = ""
-        if file and file.filename != "":
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-
-        products.append({
-            "name": name,
-            "price": price,
-            "stock": stock,
-            "sold": 0,
-            "image": filename,
-            "history": []
-        })
-
-        save_data()
-        return redirect("/")
-
-    return render_template("add.html")
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO products (user_id, name, price, stock) VALUES (?, ?, ?, ?)",
+        (session["user_id"], request.form["name"], request.form["price"], request.form["stock"])
+    )
+    conn.commit()
+    return redirect("/")
 
 # 💰 売る
 @app.route("/sell/<int:id>")
 def sell(id):
-    if products[id]["stock"] > 0:
-        products[id]["stock"] -= 1
-        products[id]["sold"] += 1
+    conn = get_db()
 
-        products[id]["history"].append({
-            "date": datetime.now().strftime("%Y-%m-%d")
-        })
+    conn.execute(
+        "UPDATE products SET stock = stock - 1 WHERE id=?",
+        (id,)
+    )
 
-        save_data()
+    conn.execute(
+        "INSERT INTO sales (product_id, date) VALUES (?, ?)",
+        (id, datetime.now().strftime("%Y-%m-%d"))
+    )
 
+    conn.commit()
     return redirect("/")
 
 # 🗑 削除
 @app.route("/delete/<int:id>")
 def delete(id):
-    if 0 <= id < len(products):
-        products.pop(id)
-        save_data()
+    conn = get_db()
+    conn.execute("DELETE FROM products WHERE id=?", (id,))
+    conn.commit()
     return redirect("/")
 
 if __name__ == "__main__":
