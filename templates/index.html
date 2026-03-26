@@ -2,54 +2,95 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>販売サイト</title>
+<title>商品管理</title>
 
-{% if design == "simple" %}
 <style>
-body { font-family: sans-serif; padding: 20px; background: white; color: black; }
-.card { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 10px; }
-button { padding: 10px; border: none; background: #4CAF50; color: white; border-radius: 5px; }
-</style>
-{% else %}
-<style>
-body { font-family: sans-serif; padding: 20px; background: black; color: white; }
-.card { background: #222; padding: 10px; margin: 10px 0; border-radius: 10px; }
-button { padding: 10px; border: none; background: orange; color: black; border-radius: 5px; }
-</style>
-{% endif %}
+body {
+    font-family: sans-serif;
+    background: #f5f5f5;
+    margin: 0;
+}
 
+.header {
+    background: #333;
+    color: white;
+    padding: 15px;
+    font-size: 20px;
+}
+
+.container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+}
+
+.card {
+    background: white;
+    width: 200px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+.card-body {
+    padding: 10px;
+}
+
+.btn {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    margin-top: 10px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.btn:hover {
+    background: #0056b3;
+}
+</style>
 </head>
+
 <body>
 
-<h1>🛒 商品一覧</h1>
-<h2>💰 売上: {{ total_sales }}円</h2>
-
-<a href="/add"><button>＋ 商品追加</button></a>
-
-<br><br>
-
-<a href="/change_design/simple">シンプル</a> |
-<a href="/change_design/cool">かっこいい</a>
-
-{% for p in products %}
-<div class="card">
-  <h3>{{ p.name }}</h3>
-
- {% if p.image %}
-  <img src="/static/uploads/{{ p.image }}" width="150">
-{% endif %}
-
-
-  <p>価格: {{ p.price }}円</p>
-  <p>在庫: {{ p.stock }}</p>
-  <p>売れた数: {{ p.sold }}</p>
-
-  <a href="/sell/{{ loop.index0 }}">
-    <button>売る</button>
-  </a>
+<div class="header">
+    商品管理アプリ
 </div>
-{% endfor %}
+
+<div style="padding: 10px;">
+    売上合計: ¥{{ total_sales }}
+    <br>
+    <a href="/add" class="btn">＋ 商品追加</a>
+</div>
+
+<div class="container">
+    {% for p in products %}
+    <div class="card">
+
+        {% if p.image %}
+        <img src="/static/uploads/{{ p.image }}">
+        {% endif %}
+
+        <div class="card-body">
+            <h3>{{ p.name }}</h3>
+            <p>¥{{ p.price }}</p>
+            <p>在庫: {{ p.stock }}</p>
+
+            <a href="/sell/{{ loop.index0 }}" class="btn">売る</a>
+        </div>
+
+    </div>
+    {% endfor %}
+</div>
 
 </body>
 </html>
