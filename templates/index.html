@@ -3,70 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>商品管理アプリ</title>
+<title>ダッシュボード</title>
 
 <link rel="stylesheet" href="/static/css/style.css">
 </head>
 
 <body>
 
-<div class="header">
-    商品管理アプリ
+<h2 style="text-align:center;">売上ダッシュボード</h2>
+
+<!-- 円グラフ -->
+<canvas id="pieChart"></canvas>
+
+<!-- 棒グラフ -->
+<canvas id="barChart"></canvas>
+
+<!-- 並び替え -->
+<div style="margin:20px;">
+    <button onclick="sortTable(0)">名前</button>
+    <button onclick="sortTable(1)">単価</button>
+    <button onclick="sortTable(2)">売れた数</button>
+    <button onclick="sortTable(4)">売上</button>
 </div>
 
-<div class="top-bar">
-    <a href="/logout" class="btn delete">ログアウト</a>
-</div>
+<!-- 表 -->
+<table id="productTable" border="1" style="width:100%; text-align:center;">
+    <thead>
+        <tr>
+            <th>商品名</th>
+            <th>単価</th>
+            <th>売れた数</th>
+            <th>在庫</th>
+            <th>売上</th>
+        </tr>
+    </thead>
 
-<!-- グラフ -->
-<div style="padding:20px; text-align:center;">
-    <canvas id="salesChart" style="max-width:600px;"></canvas>
-</div>
+    <tbody>
+        {% for p in table_data %}
+        <tr>
+            <td>{{ p.name }}</td>
+            <td>{{ p.price }}</td>
+            <td>{{ p.sold }}</td>
+            <td>{{ p.unsold }}</td>
+            <td>{{ p.total }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 
-<!-- 商品追加 -->
-<div class="form-container">
-<form method="POST" action="/add">
-    <input type="text" name="name" placeholder="商品名" required>
-    <input type="number" name="price" placeholder="価格" required>
-    <input type="number" name="stock" placeholder="在庫" required>
-    <button type="submit" class="btn">追加</button>
-</form>
-</div>
-
-<!-- 商品一覧 -->
-<div class="container">
-    {% for p in products %}
-    <div class="card">
-
-        <div class="card-body">
-            <h3>{{ p.name }}</h3>
-            <p>¥{{ p.price }}</p>
-            <p>在庫: {{ p.stock }}</p>
-
-            <a href="/sell/{{ p.id }}" class="btn">売る</a>
-            <a href="/delete/{{ p.id }}" class="btn delete">削除</a>
-        </div>
-
-    </div>
-    {% endfor %}
-</div>
+    <tfoot>
+        <tr>
+            <td colspan="4">総売上</td>
+            <td>{{ total_sum }}</td>
+        </tr>
+    </tfoot>
+</table>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const labels = JSON.parse('{{ names | tojson | safe }}');
-const data = JSON.parse('{{ sales | tojson | safe }}');
+const names = JSON.parse('{{ names | tojson | safe }}');
+const sold = JSON.parse('{{ sold_data | tojson | safe }}');
+const dates = JSON.parse('{{ dates | tojson | safe }}');
+const daily = JSON.parse('{{ daily_sales | tojson | safe }}');
 
-new Chart(document.getElementById('salesChart'), {
-    type: 'pie',
+// 円グラフ
+new Chart(document.getElementById("pieChart"), {
+    type: "pie",
     data: {
-        labels: labels,
+        labels: names,
         datasets: [{
-            data: data
+            data: sold
+        }]
+    }
+});
+
+// 棒グラフ
+new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: {
+        labels: dates,
+        datasets: [{
+            label: "日別売上",
+            data: daily
         }]
     }
 });
 </script>
+
 
 </body>
 </html>

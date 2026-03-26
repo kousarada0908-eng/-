@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
-import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "secret"
@@ -65,25 +64,6 @@ def login():
 
     return render_template("login.html")
 
-# 新規登録
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        conn = get_db()
-        conn.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            (request.form["username"], request.form["password"])
-        )
-        conn.commit()
-        return redirect("/login")
-
-    return render_template("register.html")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
-
 # 🏠 メイン
 @app.route("/")
 def index():
@@ -98,22 +78,55 @@ def index():
     ).fetchall()
 
     names = []
-    sales_data = []
+    sold_data = []
+    unsold_data = []
+    table_data = []
+
+    total_sum = 0
 
     for p in products:
-        count = conn.execute(
+        sold = conn.execute(
             "SELECT COUNT(*) FROM sales WHERE product_id=?",
             (p["id"],)
         ).fetchone()[0]
 
+        unsold = p["stock"]
+        total = sold * p["price"]
+
         names.append(p["name"])
-        sales_data.append(count)
+        sold_data.append(sold)
+        unsold_data.append(unsold)
+
+        total_sum += total
+
+        table_data.append({
+            "name": p["name"],
+            "price": p["price"],
+            "sold": sold,
+            "unsold": unsold,
+            "total": total
+        })
+
+    # 日別売上
+    daily = conn.execute("""
+        SELECT date, SUM(products.price) as total
+        FROM sales
+        JOIN products ON sales.product_id = products.id
+        GROUP BY date
+    """).fetchall()
+
+    dates = [d["date"] for d in daily]
+    daily_sales = [d["total"] for d in daily]
 
     return render_template(
         "index.html",
-        products=products,
         names=names,
-        sales=sales_data
+        sold_data=sold_data,
+        unsold_data=unsold_data,
+        table_data=table_data,
+        total_sum=total_sum,
+        dates=dates,
+        daily_sales=daily_sales
     )
 
 # ➕ 商品追加
@@ -154,5 +167,4 @@ def delete(id):
     return redirect("/")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
