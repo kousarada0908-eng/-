@@ -2,15 +2,13 @@ from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
 import json
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# デザイン
-design = "simple"
 
 DATA_FILE = "data.json"
 
@@ -33,13 +31,19 @@ def index():
     names = [p["name"] for p in products]
     sales = [p["sold"] for p in products]
 
+    ranking = sorted(
+        products,
+        key=lambda x: x["price"] * x["sold"],
+        reverse=True
+    )
+
     return render_template(
         "index.html",
         products=products,
         total_sales=total_sales,
         names=names,
         sales=sales,
-        design=design
+        ranking=ranking
     )
 
 @app.route("/add", methods=["GET", "POST"])
@@ -61,7 +65,8 @@ def add():
             "price": price,
             "stock": stock,
             "sold": 0,
-            "image": filename
+            "image": filename,
+            "history": []   # 履歴
         })
 
         save_data()
@@ -74,10 +79,16 @@ def sell(id):
     if products[id]["stock"] > 0:
         products[id]["stock"] -= 1
         products[id]["sold"] += 1
+
+        products[id]["history"].append({
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "price": products[id]["price"]
+        })
+
         save_data()
+
     return redirect("/")
 
-# 🔥 削除機能
 @app.route("/delete/<int:id>")
 def delete(id):
     if 0 <= id < len(products):

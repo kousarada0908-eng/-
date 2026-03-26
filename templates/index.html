@@ -18,9 +18,26 @@
     <a href="/add" class="btn">＋ 商品追加</a>
 </div>
 
+<!-- 目盛り切替 -->
+<div style="text-align:center; margin:20px;">
+    <button onclick="updateStep(1)">1</button>
+    <button onclick="updateStep(5)">5</button>
+    <button onclick="updateStep(10)">10</button>
+</div>
+
 <!-- グラフ -->
 <div style="padding:20px; text-align:center;">
-    <canvas id="salesChart" style="max-width:800px; margin:auto;"></canvas>
+    <canvas id="salesChart" style="max-width:800px;"></canvas>
+</div>
+
+<!-- ランキング -->
+<div style="padding:20px;">
+    <h2>売上ランキング</h2>
+    <ol>
+        {% for p in ranking %}
+        <li>{{ p.name }} - ¥{{ p.price * p.sold }}</li>
+        {% endfor %}
+    </ol>
 </div>
 
 <div class="container">
@@ -46,17 +63,15 @@
     {% endfor %}
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- グラフ描画 -->
 <script>
 const labels = JSON.parse('{{ names | tojson | safe }}');
 const data = JSON.parse('{{ sales | tojson | safe }}');
 
 const ctx = document.getElementById('salesChart');
 
-new Chart(ctx, {
+let chart = new Chart(ctx, {
     type: 'bar',
     data: {
         labels: labels,
@@ -68,19 +83,6 @@ new Chart(ctx, {
         }]
     },
     options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                display: false
-            },
-            title: {
-                display: true,
-                text: '商品ごとの販売数',
-                font: {
-                    size: 18
-                }
-            }
-        },
         scales: {
             y: {
                 beginAtZero: true,
@@ -91,6 +93,11 @@ new Chart(ctx, {
         }
     }
 });
+
+function updateStep(step) {
+    chart.options.scales.y.ticks.stepSize = step;
+    chart.update();
+}
 </script>
 
 </body>

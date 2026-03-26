@@ -8,8 +8,6 @@ body {
     background: linear-gradient(90deg, #333, #555);
     color: white;
     padding: 20px;
-    font-size: 22px;
-    font-weight: bold;
     text-align: center;
 }
 
@@ -17,7 +15,6 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 15px;
-    align-items: center;
 }
 
 .container {
@@ -33,12 +30,6 @@ body {
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     overflow: hidden;
-    transition: 0.3s;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 .card img {
@@ -60,16 +51,10 @@ body {
     color: white;
     text-decoration: none;
     border-radius: 8px;
-    font-weight: bold;
-    transition: 0.3s;
-}
-
-.btn:hover {
-    opacity: 0.8;
 }
 
 .delete {
-    background: linear-gradient(45deg, #ff4b2b, #ff0000);
+    background: red;
 }
 
 .form-container {
@@ -86,14 +71,8 @@ input {
     margin-bottom: 15px;
 }
 
-.back {
-    display: block;
-    text-align: center;
-    margin-top: 10px;
-}
 canvas {
     background: white;
     border-radius: 10px;
     padding: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
