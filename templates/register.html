@@ -1,36 +1,11 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>新規登録</title>
-
-<link rel="stylesheet" href="/static/css/style.css">
-</head>
-
-<body>
-
-<div class="header">
-    新規登録
-</div>
-
-<div class="form-container">
+<h2>新規登録</h2>
 
 <form method="POST">
-
-    <label>ユーザー名</label>
-    <input type="text" name="username" required>
-
-    <label>パスワード</label>
-    <input type="password" name="password" required>
-
-    <button type="submit" class="btn">登録</button>
-
+    <input name="username" placeholder="ユーザー名">
+    <input name="password" type="password" placeholder="パスワード">
+    <button type="submit">登録</button>
 </form>
 
-<a href="/login" class="back">ログインに戻る</a>
+<br>
 
-</div>
-
-</body>
-</html>
+<a href="/login">ログインへ戻る</a>
