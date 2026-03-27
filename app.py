@@ -8,9 +8,6 @@ app.secret_key = "secret"
 
 DB = "app.db"
 
-# =========================
-# DB接続
-# =========================
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
@@ -73,7 +70,23 @@ def login():
     return render_template("login.html")
 
 # =========================
-# 🏠 メイン画面
+# 🆕 新規登録
+# =========================
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            (request.form["username"], request.form["password"])
+        )
+        conn.commit()
+        return redirect("/login")
+
+    return render_template("register.html")
+
+# =========================
+# 🏠 メイン
 # =========================
 @app.route("/")
 def index():
@@ -115,7 +128,6 @@ def index():
             "total": total
         })
 
-    # 📊 日別売上
     daily = conn.execute("""
         SELECT date, SUM(products.price) as total
         FROM sales
@@ -176,12 +188,8 @@ def delete(id):
     return redirect("/")
 
 # =========================
-# 🚀 Render対応 起動設定（ここが重要）
+# 🚀 Render対応起動
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(
-        host="0.0.0.0",   # ← Render必須
-        port=port,
-        debug=False       # ← 本番はFalse
-    )
+    app.run(host="0.0.0.0", port=port, debug=False)

@@ -1,66 +1,26 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>ダッシュボード</title>
+<h2>ダッシュボード</h2>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<p>合計売上: {{ total_sum }}</p>
 
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-    }
+<h3>商品一覧</h3>
 
-    .container {
-      max-width: 1000px;
-      margin: auto;
-    }
+<form action="/add" method="POST">
+    <input name="name" placeholder="商品名">
+    <input name="price" placeholder="価格">
+    <input name="stock" placeholder="在庫">
+    <button type="submit">追加</button>
+</form>
 
-    .card {
-      background: white;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-  </style>
-</head>
+<ul>
+{% for p in table_data %}
+    <li>
+        {{ p.name }} / 売上: {{ p.total }} / 在庫: {{ p.unsold }}
+        <a href="/sell/{{ loop.index }}">売る</a>
+        <a href="/delete/{{ loop.index }}">削除</a>
+    </li>
+{% endfor %}
+</ul>
 
-<body>
+<br>
 
-<div class="container">
-
-  <h1>売上ダッシュボード</h1>
-
-  <!-- ✅ Flask → JSデータ受け渡し（ここだけJinja OK） -->
- <script>
-  window.dashboardData = JSON.parse('{{ {
-    "names": names,
-    "sold": sold_data,
-    "dates": dates,
-    "daily": daily_sales,
-    "total": total_sum
-  } | tojson | safe }}');
-</script>
-
-
-  <div class="card">
-    <h2>商品別売上</h2>
-    <canvas id="productChart"></canvas>
-  </div>
-
-  <div class="card">
-    <h2>日別売上</h2>
-    <canvas id="dailyChart"></canvas>
-  </div>
-
-</div>
-
-<!-- 外部JS -->
-<script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
-</body>
-</html>
+<a href="/login">ログアウト（ログイン画面へ）</a>
