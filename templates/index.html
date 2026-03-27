@@ -1,26 +1,30 @@
-<h2>ダッシュボード</h2>
+<h2>商品管理</h2>
 
-<p>合計売上: {{ total_sum }}</p>
-
-<h3>商品一覧</h3>
-
-<form action="/add" method="POST">
+<form action="/add" method="POST" enctype="multipart/form-data">
     <input name="name" placeholder="商品名">
     <input name="price" placeholder="価格">
     <input name="stock" placeholder="在庫">
+    <input type="file" name="image">
     <button type="submit">追加</button>
 </form>
 
-<ul>
+<hr>
+
 {% for p in table_data %}
-    <li>
-        {{ p.name }} / 売上: {{ p.total }} / 在庫: {{ p.unsold }}
-        <a href="/sell/{{ loop.index }}">売る</a>
-        <a href="/delete/{{ loop.index }}">削除</a>
-    </li>
+    <div>
+        <h3>{{ p.name }}</h3>
+        <p>価格: {{ p.price }}</p>
+        <p>売れた数: {{ p.sold }}</p>
+        <p>在庫: {{ p.stock }}</p>
+        <p>売上: {{ p.total }}</p>
+
+        {% if p.image %}
+            <img src="/static/images/{{ p.image }}" width="120">
+        {% endif %}
+
+        <br>
+        <a href="/sell/{{ p.id }}">売る</a>
+        <a href="/delete/{{ p.id }}">削除</a>
+    </div>
+    <hr>
 {% endfor %}
-</ul>
-
-<br>
-
-<a href="/login">ログアウト（ログイン画面へ）</a>

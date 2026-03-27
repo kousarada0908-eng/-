@@ -8,6 +8,12 @@ app.secret_key = "secret"
 
 DB = "app.db"
 
+UPLOAD_FOLDER = "static/images"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# =========================
+# DB接続
+# =========================
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
@@ -34,7 +40,8 @@ def init_db():
         user_id INTEGER,
         name TEXT,
         price INTEGER,
-        stock INTEGER
+        stock INTEGER,
+        image TEXT
     )
     """)
 
@@ -52,7 +59,7 @@ def init_db():
 init_db()
 
 # =========================
-# 🔐 ログイン
+# ログイン
 # =========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -70,7 +77,7 @@ def login():
     return render_template("login.html")
 
 # =========================
-# 🆕 新規登録
+# 新規登録
 # =========================
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -86,7 +93,7 @@ def register():
     return render_template("register.html")
 
 # =========================
-# 🏠 メイン
+# メイン
 # =========================
 @app.route("/")
 def index():
@@ -100,11 +107,7 @@ def index():
         (session["user_id"],)
     ).fetchall()
 
-    names = []
-    sold_data = []
-    unsold_data = []
     table_data = []
-    total_sum = 0
 
     for p in products:
         sold = conn.execute(
@@ -112,59 +115,51 @@ def index():
             (p["id"],)
         ).fetchone()[0]
 
-        unsold = p["stock"]
         total = sold * p["price"]
 
-        names.append(p["name"])
-        sold_data.append(sold)
-        unsold_data.append(unsold)
-        total_sum += total
-
         table_data.append({
+            "id": p["id"],
             "name": p["name"],
             "price": p["price"],
             "sold": sold,
-            "unsold": unsold,
-            "total": total
+            "stock": p["stock"],
+            "total": total,
+            "image": p["image"]
         })
 
-    daily = conn.execute("""
-        SELECT date, SUM(products.price) as total
-        FROM sales
-        JOIN products ON sales.product_id = products.id
-        GROUP BY date
-        ORDER BY date
-    """).fetchall()
-
-    dates = [d["date"] for d in daily]
-    daily_sales = [d["total"] for d in daily]
-
-    return render_template(
-        "index.html",
-        names=names,
-        sold_data=sold_data,
-        unsold_data=unsold_data,
-        table_data=table_data,
-        total_sum=total_sum,
-        dates=dates,
-        daily_sales=daily_sales
-    )
+    return render_template("index.html", table_data=table_data)
 
 # =========================
-# ➕ 商品追加
+# 商品追加（画像対応）
 # =========================
 @app.route("/add", methods=["POST"])
 def add():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    name = request.form["name"]
+    price = int(request.form["price"])
+    stock = int(request.form["stock"])
+
+    file = request.files.get("image")
+    filename = ""
+
+    if file and file.filename != "":
+        filename = file.filename
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(filepath)
+
     conn = get_db()
     conn.execute(
-        "INSERT INTO products (user_id, name, price, stock) VALUES (?, ?, ?, ?)",
-        (session["user_id"], request.form["name"], request.form["price"], request.form["stock"])
+        "INSERT INTO products (user_id, name, price, stock, image) VALUES (?, ?, ?, ?, ?)",
+        (session["user_id"], name, price, stock, filename)
     )
     conn.commit()
+
     return redirect("/")
 
 # =========================
-# 💰 売る
+# 売る
 # =========================
 @app.route("/sell/<int:id>")
 def sell(id):
@@ -178,7 +173,7 @@ def sell(id):
     return redirect("/")
 
 # =========================
-# 🗑 削除
+# 削除
 # =========================
 @app.route("/delete/<int:id>")
 def delete(id):
@@ -188,8 +183,8 @@ def delete(id):
     return redirect("/")
 
 # =========================
-# 🚀 Render対応起動
+# Render対応
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port)
