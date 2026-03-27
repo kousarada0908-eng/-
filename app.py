@@ -130,31 +130,39 @@ def index():
     return render_template("index.html", table_data=table_data)
 
 # =========================
-# 商品追加（画像対応）
+# 商品追加（エラー対策済）
 # =========================
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
         return redirect("/login")
 
-    name = request.form["name"]
-    price = int(request.form["price"])
-    stock = int(request.form["stock"])
+    try:
+        name = request.form.get("name", "")
+        price = int(request.form.get("price", 0))
+        stock = int(request.form.get("stock", 0))
 
-    file = request.files.get("image")
-    filename = ""
+        file = request.files.get("image")
+        filename = ""
 
-    if file and file.filename != "":
-        filename = file.filename
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        file.save(filepath)
+        if file and file.filename != "":
+            filename = file.filename
 
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO products (user_id, name, price, stock, image) VALUES (?, ?, ?, ?, ?)",
-        (session["user_id"], name, price, stock, filename)
-    )
-    conn.commit()
+            # フォルダがなければ作る
+            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(filepath)
+
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO products (user_id, name, price, stock, image) VALUES (?, ?, ?, ?, ?)",
+            (session["user_id"], name, price, stock, filename)
+        )
+        conn.commit()
+
+    except Exception as e:
+        return f"エラー内容: {str(e)}"
 
     return redirect("/")
 
