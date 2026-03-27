@@ -10,6 +10,28 @@
 
 <hr>
 
+<canvas id="chart" width="400" height="200"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const names = {{ names | tojson }};
+const sold = {{ sold_data | tojson }};
+
+new Chart(document.getElementById("chart"), {
+    type: "bar",
+    data: {
+        labels: names,
+        datasets: [{
+            label: "売れた数",
+            data: sold
+        }]
+    }
+});
+</script>
+
+<hr>
+
 {% for p in table_data %}
     <div>
         <h3>{{ p.name }}</h3>

@@ -93,7 +93,7 @@ def register():
     return render_template("register.html")
 
 # =========================
-# メイン
+# メイン（グラフ対応）
 # =========================
 @app.route("/")
 def index():
@@ -108,6 +108,8 @@ def index():
     ).fetchall()
 
     table_data = []
+    names = []
+    sold_data = []
 
     for p in products:
         sold = conn.execute(
@@ -127,10 +129,18 @@ def index():
             "image": p["image"]
         })
 
-    return render_template("index.html", table_data=table_data)
+        names.append(p["name"])
+        sold_data.append(sold)
+
+    return render_template(
+        "index.html",
+        table_data=table_data,
+        names=names,
+        sold_data=sold_data
+    )
 
 # =========================
-# 商品追加（エラー対策済）
+# 商品追加（安全版）
 # =========================
 @app.route("/add", methods=["POST"])
 def add():
@@ -147,10 +157,7 @@ def add():
 
         if file and file.filename != "":
             filename = file.filename
-
-            # フォルダがなければ作る
             os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-
             filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(filepath)
 
