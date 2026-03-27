@@ -81,7 +81,6 @@ def index():
     sold_data = []
     unsold_data = []
     table_data = []
-
     total_sum = 0
 
     for p in products:
@@ -96,7 +95,6 @@ def index():
         names.append(p["name"])
         sold_data.append(sold)
         unsold_data.append(unsold)
-
         total_sum += total
 
         table_data.append({
@@ -107,12 +105,13 @@ def index():
             "total": total
         })
 
-    # 日別売上
+    # 📊 日別売上
     daily = conn.execute("""
         SELECT date, SUM(products.price) as total
         FROM sales
         JOIN products ON sales.product_id = products.id
         GROUP BY date
+        ORDER BY date
     """).fetchall()
 
     dates = [d["date"] for d in daily]
@@ -144,17 +143,11 @@ def add():
 @app.route("/sell/<int:id>")
 def sell(id):
     conn = get_db()
-
-    conn.execute(
-        "UPDATE products SET stock = stock - 1 WHERE id=?",
-        (id,)
-    )
-
+    conn.execute("UPDATE products SET stock = stock - 1 WHERE id=?", (id,))
     conn.execute(
         "INSERT INTO sales (product_id, date) VALUES (?, ?)",
         (id, datetime.now().strftime("%Y-%m-%d"))
     )
-
     conn.commit()
     return redirect("/")
 
