@@ -9,10 +9,10 @@
 
 <hr>
 
-<h3>日別売上</h3>
+<h3>📈 日別売上</h3>
 <canvas id="lineChart"></canvas>
 
-<h3>商品別売れた数</h3>
+<h3>🥧 売上構成</h3>
 <canvas id="pieChart"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -20,8 +20,8 @@
 <script>
 const dates = {{ dates | tojson }};
 const dailySales = {{ daily_sales | tojson }};
-const names = {{ names | tojson }};
-const soldCounts = {{ sold_counts | tojson }};
+const pieLabels = {{ pie_labels | tojson }};
+const pieData = {{ pie_data | tojson }};
 
 // 折れ線
 new Chart(document.getElementById("lineChart"), {
@@ -35,13 +35,19 @@ new Chart(document.getElementById("lineChart"), {
     }
 });
 
+// 色自動生成
+const colors = pieLabels.map((_, i) =>
+    `hsl(${i * 60}, 70%, 60%)`
+);
+
 // 円グラフ
 new Chart(document.getElementById("pieChart"), {
     type: "pie",
     data: {
-        labels: names,
+        labels: pieLabels,
         datasets: [{
-            data: soldCounts
+            data: pieData,
+            backgroundColor: colors
         }]
     }
 });

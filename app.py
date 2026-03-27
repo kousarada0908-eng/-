@@ -89,7 +89,7 @@ def register():
     return render_template("register.html")
 
 # =========================
-# メイン（グラフ対応）
+# メイン（グラフ＋円グラフ）
 # =========================
 @app.route("/")
 def index():
@@ -106,7 +106,9 @@ def index():
     table_data = []
     names = []
     sold_counts = []
+
     total_sum = 0
+    total_stock = 0
 
     for p in products:
         sold = conn.execute(
@@ -116,6 +118,8 @@ def index():
 
         total = sold * p["price"]
         total_sum += total
+
+        total_stock += p["stock"]
 
         table_data.append({
             "id": p["id"],
@@ -129,7 +133,14 @@ def index():
         names.append(p["name"])
         sold_counts.append(sold)
 
-    # 日別売上
+    # 売れ残り（全体）
+    unsold_total = total_stock
+
+    # 円グラフ用
+    pie_labels = names + ["売れ残り"]
+    pie_data = sold_counts + [unsold_total]
+
+    # 折れ線（売上）
     daily = conn.execute("""
         SELECT date, SUM(products.price) as total
         FROM sales
@@ -144,11 +155,11 @@ def index():
     return render_template(
         "index.html",
         table_data=table_data,
-        names=names,
-        sold_counts=sold_counts,
+        total_sum=total_sum,
         dates=dates,
         daily_sales=daily_sales,
-        total_sum=total_sum
+        pie_labels=pie_labels,
+        pie_data=pie_data
     )
 
 # =========================
