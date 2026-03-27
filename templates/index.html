@@ -1,95 +1,66 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ダッシュボード</title>
+  <meta charset="UTF-8">
+  <title>ダッシュボード</title>
 
-<link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 
 <body>
 
-<h2 style="text-align:center;">売上ダッシュボード</h2>
+<div class="container">
 
-<!-- 円グラフ -->
-<canvas id="pieChart"></canvas>
+  <h1>売上ダッシュボード</h1>
 
-<!-- 棒グラフ -->
-<canvas id="barChart"></canvas>
-
-<!-- 並び替え -->
-<div style="margin:20px;">
-    <button onclick="sortTable(0)">名前</button>
-    <button onclick="sortTable(1)">単価</button>
-    <button onclick="sortTable(2)">売れた数</button>
-    <button onclick="sortTable(4)">売上</button>
-</div>
-
-<!-- 表 -->
-<table id="productTable" border="1" style="width:100%; text-align:center;">
-    <thead>
-        <tr>
-            <th>商品名</th>
-            <th>単価</th>
-            <th>売れた数</th>
-            <th>在庫</th>
-            <th>売上</th>
-        </tr>
-    </thead>
-
-    <tbody>
-        {% for p in table_data %}
-        <tr>
-            <td>{{ p.name }}</td>
-            <td>{{ p.price }}</td>
-            <td>{{ p.sold }}</td>
-            <td>{{ p.unsold }}</td>
-            <td>{{ p.total }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-
-    <tfoot>
-        <tr>
-            <td colspan="4">総売上</td>
-            <td>{{ total_sum }}</td>
-        </tr>
-    </tfoot>
-</table>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-const names = JSON.parse('{{ names | tojson | safe }}');
-const sold = JSON.parse('{{ sold_data | tojson | safe }}');
-const dates = JSON.parse('{{ dates | tojson | safe }}');
-const daily = JSON.parse('{{ daily_sales | tojson | safe }}');
-
-// 円グラフ
-new Chart(document.getElementById("pieChart"), {
-    type: "pie",
-    data: {
-        labels: names,
-        datasets: [{
-            data: sold
-        }]
-    }
-});
-
-// 棒グラフ
-new Chart(document.getElementById("barChart"), {
-    type: "bar",
-    data: {
-        labels: dates,
-        datasets: [{
-            label: "日別売上",
-            data: daily
-        }]
-    }
-});
+  <!-- ✅ Flask → JSデータ受け渡し（ここだけJinja OK） -->
+ <script>
+  window.dashboardData = JSON.parse('{{ {
+    "names": names,
+    "sold": sold_data,
+    "dates": dates,
+    "daily": daily_sales,
+    "total": total_sum
+  } | tojson | safe }}');
 </script>
 
+
+  <div class="card">
+    <h2>商品別売上</h2>
+    <canvas id="productChart"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>日別売上</h2>
+    <canvas id="dailyChart"></canvas>
+  </div>
+
+</div>
+
+<!-- 外部JS -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
 </body>
 </html>
