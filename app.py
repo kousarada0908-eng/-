@@ -8,9 +8,6 @@ app.secret_key = "secret"
 
 DB = "app.db"
 
-UPLOAD_FOLDER = "static/images"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
 # =========================
 # DB接続
 # =========================
@@ -40,8 +37,7 @@ def init_db():
         user_id INTEGER,
         name TEXT,
         price INTEGER,
-        stock INTEGER,
-        image TEXT
+        stock INTEGER
     )
     """)
 
@@ -109,7 +105,8 @@ def index():
 
     table_data = []
     names = []
-    sold_data = []
+    sold_counts = []
+    total_sum = 0
 
     for p in products:
         sold = conn.execute(
@@ -118,58 +115,60 @@ def index():
         ).fetchone()[0]
 
         total = sold * p["price"]
+        total_sum += total
 
         table_data.append({
             "id": p["id"],
             "name": p["name"],
             "price": p["price"],
-            "sold": sold,
             "stock": p["stock"],
-            "total": total,
-            "image": p["image"]
+            "sold": sold,
+            "total": total
         })
 
         names.append(p["name"])
-        sold_data.append(sold)
+        sold_counts.append(sold)
+
+    # 日別売上
+    daily = conn.execute("""
+        SELECT date, SUM(products.price) as total
+        FROM sales
+        JOIN products ON sales.product_id = products.id
+        GROUP BY date
+        ORDER BY date
+    """).fetchall()
+
+    dates = [d["date"] for d in daily]
+    daily_sales = [d["total"] for d in daily]
 
     return render_template(
         "index.html",
         table_data=table_data,
         names=names,
-        sold_data=sold_data
+        sold_counts=sold_counts,
+        dates=dates,
+        daily_sales=daily_sales,
+        total_sum=total_sum
     )
 
 # =========================
-# 商品追加（安全版）
+# 商品追加
 # =========================
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
         return redirect("/login")
 
-    try:
-        name = request.form.get("name", "")
-        price = int(request.form.get("price", 0))
-        stock = int(request.form.get("stock", 0))
+    name = request.form["name"]
+    price = int(request.form["price"])
+    stock = int(request.form["stock"])
 
-        file = request.files.get("image")
-        filename = ""
-
-        if file and file.filename != "":
-            filename = file.filename
-            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            file.save(filepath)
-
-        conn = get_db()
-        conn.execute(
-            "INSERT INTO products (user_id, name, price, stock, image) VALUES (?, ?, ?, ?, ?)",
-            (session["user_id"], name, price, stock, filename)
-        )
-        conn.commit()
-
-    except Exception as e:
-        return f"エラー内容: {str(e)}"
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO products (user_id, name, price, stock) VALUES (?, ?, ?, ?)",
+        (session["user_id"], name, price, stock)
+    )
+    conn.commit()
 
     return redirect("/")
 
