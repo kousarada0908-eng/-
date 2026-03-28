@@ -9,16 +9,26 @@
 
 <hr>
 
-<h3>📈 日別売上</h3>
+<h3>📈 売上グラフ</h3>
 
-<button onclick="showTotal()">日別合計</button>
+<!-- ▼ 切り替え -->
+<button onclick="showTotal()">合計</button>
 <button onclick="showProduct()">商品別</button>
 
 <select id="unitSelect">
-    <option value="100">100円単位</option>
-    <option value="1000">1000円単位</option>
-    <option value="10000">10000円単位</option>
+    <option value="100">100円</option>
+    <option value="1000">1000円</option>
+    <option value="10000">10000円</option>
 </select>
+
+<!-- ▼ 期間切替 -->
+<select id="modeSelect" onchange="changeMode()">
+    <option value="day">日別</option>
+    <option value="week">週別</option>
+    <option value="month">月別</option>
+</select>
+
+<a href="/download">CSVダウンロード</a>
 
 <canvas id="lineChart"></canvas>
 
@@ -37,6 +47,11 @@ const pieData = {{ pie_data | tojson }};
 let lineChart;
 let mode = "total";
 
+// 🎨 色生成
+function getColor(i) {
+    return `hsl(${i * 60}, 70%, 50%)`;
+}
+
 function createChart(unit) {
 
     if (lineChart) lineChart.destroy();
@@ -45,23 +60,31 @@ function createChart(unit) {
     let allValues = [];
 
     if (mode === "total") {
+
         const converted = dailySales.map(v => v / unit);
         allValues = converted;
 
         datasets.push({
-            label: `日別売上（${unit}円単位）`,
+            label: "合計",
             data: converted,
+            borderColor: "blue",
+            backgroundColor: "rgba(0,0,255,0.1)",
+            fill: true,
             tension: 0.3
         });
 
     } else {
-        Object.keys(productDaily).forEach(name => {
+
+        Object.keys(productDaily).forEach((name, i) => {
             const converted = productDaily[name].map(v => v / unit);
             allValues = allValues.concat(converted);
 
             datasets.push({
                 label: name,
                 data: converted,
+                borderColor: getColor(i),
+                backgroundColor: getColor(i),
+                fill: false,
                 tension: 0.3
             });
         });
@@ -78,6 +101,15 @@ function createChart(unit) {
         },
         options: {
             responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.raw * unit + "円";
+                        }
+                    }
+                }
+            },
             scales: {
                 y: {
                     beginAtZero: true,
@@ -102,6 +134,11 @@ document.getElementById("unitSelect").addEventListener("change", function() {
     createChart(Number(this.value));
 });
 
+function changeMode() {
+    const m = document.getElementById("modeSelect").value;
+    window.location.href = "/?mode=" + m;
+}
+
 createChart(100);
 
 // 円グラフ
@@ -120,38 +157,3 @@ new Chart(document.getElementById("pieChart"), {
     }
 });
 </script>
-
-<hr>
-
-<h3>商品一覧</h3>
-
-<table border="1">
-<tr>
-    <th>商品名</th>
-    <th>単価</th>
-    <th>在庫</th>
-    <th>売れた数</th>
-    <th>売上</th>
-    <th>操作</th>
-</tr>
-
-{% for p in table_data %}
-<tr>
-    <td>{{ p.name }}</td>
-    <td>{{ p.price }}</td>
-    <td>{{ p.stock }}</td>
-    <td>{{ p.sold }}</td>
-    <td>{{ p.total }}</td>
-    <td>
-        <a href="/sell/{{ p.id }}">売る</a>
-        <a href="/delete/{{ p.id }}">削除</a>
-    </td>
-</tr>
-{% endfor %}
-
-<tr>
-    <td colspan="4"><b>合計売上</b></td>
-    <td colspan="2"><b>{{ total_sum }}</b></td>
-</tr>
-
-</table>

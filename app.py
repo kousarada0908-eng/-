@@ -8,11 +8,17 @@ app.secret_key = "secret"
 
 DB = "app.db"
 
+# =========================
+# DB接続
+# =========================
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
     return conn
 
+# =========================
+# 初期化
+# =========================
 def init_db():
     conn = get_db()
     c = conn.cursor()
@@ -126,48 +132,62 @@ def index():
         names.append(p["name"])
         sold_counts.append(sold)
 
+    # =========================
     # 円グラフ
+    # =========================
     pie_labels = names + ["売れ残り"]
     pie_data = sold_counts + [total_stock]
 
     # =========================
-    # 日別合計
+    # 集計モード（日 / 週 / 月）
     # =========================
-    daily = conn.execute("""
-        SELECT date, SUM(products.price) as total
+    mode = request.args.get("mode", "day")
+
+    if mode == "month":
+        date_format = "%Y-%m"
+    elif mode == "week":
+        date_format = "%Y-%W"
+    else:
+        date_format = "%Y-%m-%d"
+
+    # =========================
+    # 合計グラフ
+    # =========================
+    daily = conn.execute(f"""
+        SELECT strftime('{date_format}', date) as d, SUM(products.price) as total
         FROM sales
         JOIN products ON sales.product_id = products.id
-        GROUP BY date
-        ORDER BY date
+        GROUP BY d
+        ORDER BY d
     """).fetchall()
 
-    dates = [d["date"] for d in daily]
+    dates = [d["d"] for d in daily]
     daily_sales = [d["total"] for d in daily]
 
     # =========================
-    # 商品別日別（←ここが本物）
+    # 商品別グラフ（DBから生成）
     # =========================
-    product_sales = conn.execute("""
-        SELECT products.name, sales.date, SUM(products.price) as total
+    product_sales = conn.execute(f"""
+        SELECT products.name, strftime('{date_format}', sales.date) as d, SUM(products.price) as total
         FROM sales
         JOIN products ON sales.product_id = products.id
-        GROUP BY products.name, sales.date
-        ORDER BY sales.date
+        GROUP BY products.name, d
+        ORDER BY d
     """).fetchall()
 
     product_daily = {}
 
     for row in product_sales:
         name = row["name"]
-        date = row["date"]
+        d = row["d"]
         total = row["total"]
 
         if name not in product_daily:
             product_daily[name] = {}
 
-        product_daily[name][date] = total
+        product_daily[name][d] = total
 
-    # 日付に合わせる
+    # 日付に合わせて整形
     for name in product_daily:
         product_daily[name] = [
             product_daily[name].get(d, 0) for d in dates
@@ -185,7 +205,7 @@ def index():
     )
 
 # =========================
-# 追加
+# 商品追加
 # =========================
 @app.route("/add", methods=["POST"])
 def add():
@@ -224,6 +244,34 @@ def delete(id):
     conn.commit()
     return redirect("/")
 
+# =========================
+# CSVダウンロード
+# =========================
+@app.route("/download")
+def download():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    conn = get_db()
+
+    data = conn.execute("""
+        SELECT products.name, sales.date, products.price
+        FROM sales
+        JOIN products ON sales.product_id = products.id
+    """).fetchall()
+
+    csv_data = "商品名,日付,価格\n"
+    for row in data:
+        csv_data += f"{row['name']},{row['date']},{row['price']}\n"
+
+    return csv_data, 200, {
+        "Content-Type": "text/csv",
+        "Content-Disposition": "attachment; filename=sales.csv"
+    }
+
+# =========================
+# 起動
+# =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
