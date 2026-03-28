@@ -8,17 +8,11 @@ app.secret_key = "secret"
 
 DB = "app.db"
 
-# =========================
-# DB接続
-# =========================
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
     return conn
 
-# =========================
-# DB初期化
-# =========================
 def init_db():
     conn = get_db()
     c = conn.cursor()
@@ -73,7 +67,7 @@ def login():
     return render_template("login.html")
 
 # =========================
-# 新規登録
+# 登録
 # =========================
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -89,7 +83,7 @@ def register():
     return render_template("register.html")
 
 # =========================
-# メイン（グラフ＋円グラフ）
+# メイン
 # =========================
 @app.route("/")
 def index():
@@ -118,7 +112,6 @@ def index():
 
         total = sold * p["price"]
         total_sum += total
-
         total_stock += p["stock"]
 
         table_data.append({
@@ -133,14 +126,13 @@ def index():
         names.append(p["name"])
         sold_counts.append(sold)
 
-    # 売れ残り（全体）
-    unsold_total = total_stock
-
-    # 円グラフ用
+    # 円グラフ
     pie_labels = names + ["売れ残り"]
-    pie_data = sold_counts + [unsold_total]
+    pie_data = sold_counts + [total_stock]
 
-    # 折れ線（売上）
+    # =========================
+    # 日別合計
+    # =========================
     daily = conn.execute("""
         SELECT date, SUM(products.price) as total
         FROM sales
@@ -152,35 +144,60 @@ def index():
     dates = [d["date"] for d in daily]
     daily_sales = [d["total"] for d in daily]
 
+    # =========================
+    # 商品別日別（←ここが本物）
+    # =========================
+    product_sales = conn.execute("""
+        SELECT products.name, sales.date, SUM(products.price) as total
+        FROM sales
+        JOIN products ON sales.product_id = products.id
+        GROUP BY products.name, sales.date
+        ORDER BY sales.date
+    """).fetchall()
+
+    product_daily = {}
+
+    for row in product_sales:
+        name = row["name"]
+        date = row["date"]
+        total = row["total"]
+
+        if name not in product_daily:
+            product_daily[name] = {}
+
+        product_daily[name][date] = total
+
+    # 日付に合わせる
+    for name in product_daily:
+        product_daily[name] = [
+            product_daily[name].get(d, 0) for d in dates
+        ]
+
     return render_template(
         "index.html",
         table_data=table_data,
         total_sum=total_sum,
         dates=dates,
         daily_sales=daily_sales,
+        product_daily=product_daily,
         pie_labels=pie_labels,
         pie_data=pie_data
     )
 
 # =========================
-# 商品追加
+# 追加
 # =========================
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
         return redirect("/login")
 
-    name = request.form["name"]
-    price = int(request.form["price"])
-    stock = int(request.form["stock"])
-
     conn = get_db()
     conn.execute(
         "INSERT INTO products (user_id, name, price, stock) VALUES (?, ?, ?, ?)",
-        (session["user_id"], name, price, stock)
+        (session["user_id"], request.form["name"], int(request.form["price"]), int(request.form["stock"]))
     )
     conn.commit()
-
     return redirect("/")
 
 # =========================
@@ -207,9 +224,6 @@ def delete(id):
     conn.commit()
     return redirect("/")
 
-# =========================
-# Render対応
-# =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

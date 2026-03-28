@@ -11,7 +11,9 @@
 
 <h3>📈 日別売上</h3>
 
-<!-- ★ 単位選択追加 -->
+<button onclick="showTotal()">日別合計</button>
+<button onclick="showProduct()">商品別</button>
+
 <select id="unitSelect">
     <option value="100">100円単位</option>
     <option value="1000">1000円単位</option>
@@ -28,39 +30,51 @@
 <script>
 const dates = {{ dates | tojson }};
 const dailySales = {{ daily_sales | tojson }};
+const productDaily = {{ product_daily | tojson }};
 const pieLabels = {{ pie_labels | tojson }};
 const pieData = {{ pie_data | tojson }};
 
-// =========================
-// 📈 折れ線グラフ（強化版）
-// =========================
 let lineChart;
+let mode = "total";
 
-function createLineChart(unit) {
+function createChart(unit) {
 
-    // 単位変換
-    const converted = dailySales.map(v => v / unit);
+    if (lineChart) lineChart.destroy();
 
-    // 最大値
-    const maxValue = Math.max(...converted);
+    let datasets = [];
+    let allValues = [];
 
-    // 👉 真ん中に来るよう調整
-    const suggestedMax = maxValue * 2;
+    if (mode === "total") {
+        const converted = dailySales.map(v => v / unit);
+        allValues = converted;
 
-    // 既存グラフ削除
-    if (lineChart) {
-        lineChart.destroy();
+        datasets.push({
+            label: `日別売上（${unit}円単位）`,
+            data: converted,
+            tension: 0.3
+        });
+
+    } else {
+        Object.keys(productDaily).forEach(name => {
+            const converted = productDaily[name].map(v => v / unit);
+            allValues = allValues.concat(converted);
+
+            datasets.push({
+                label: name,
+                data: converted,
+                tension: 0.3
+            });
+        });
     }
+
+    const maxValue = Math.max(...allValues);
+    const suggestedMax = maxValue * 2;
 
     lineChart = new Chart(document.getElementById("lineChart"), {
         type: "line",
         data: {
             labels: dates,
-            datasets: [{
-                label: `売上（${unit}円単位）`,
-                data: converted,
-                tension: 0.3
-            }]
+            datasets: datasets
         },
         options: {
             responsive: true,
@@ -74,20 +88,23 @@ function createLineChart(unit) {
     });
 }
 
-// 初期表示（100円単位）
-createLineChart(100);
+function showTotal() {
+    mode = "total";
+    createChart(Number(document.getElementById("unitSelect").value));
+}
 
-// 単位変更
+function showProduct() {
+    mode = "product";
+    createChart(Number(document.getElementById("unitSelect").value));
+}
+
 document.getElementById("unitSelect").addEventListener("change", function() {
-    createLineChart(Number(this.value));
+    createChart(Number(this.value));
 });
 
+createChart(100);
 
-// =========================
-// 🥧 円グラフ
-// =========================
-
-// 色自動生成（商品増えてもOK）
+// 円グラフ
 const colors = pieLabels.map((_, i) =>
     `hsl(${i * 60}, 70%, 60%)`
 );
