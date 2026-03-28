@@ -1,11 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>新規登録</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* カード */
+.container {
+    width: 90%;
+    max-width: 400px;
+    background: #1e293b;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+/* 入力 */
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+}
+
+/* ボタン */
+button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg,#4f46e5,#06b6d4);
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* リンク */
+a {
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    color: #93c5fd;
+    text-decoration: none;
+}
+
+h2 {
+    text-align: center;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
 <h2>新規登録</h2>
 
 <form method="POST">
-    <input name="username" placeholder="ユーザー名">
-    <input type="password" name="password" placeholder="パスワード">
+
+    <input name="username" placeholder="ユーザー名" required>
+
+    <!-- 🔥 追加：Gmail用メールアドレス -->
+    <input type="email" name="email" placeholder="Gmailアドレス" required>
+
+    <input type="password" name="password" placeholder="パスワード" required>
+
     <button type="submit">登録</button>
+
 </form>
 
-<br>
-
 <a href="/login">ログインへ戻る</a>
+
+</div>
+
+</body>
+</html>
