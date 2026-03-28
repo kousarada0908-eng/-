@@ -10,6 +10,14 @@
 <hr>
 
 <h3>📈 日別売上</h3>
+
+<!-- ★ 単位選択追加 -->
+<select id="unitSelect">
+    <option value="100">100円単位</option>
+    <option value="1000">1000円単位</option>
+    <option value="10000">10000円単位</option>
+</select>
+
 <canvas id="lineChart"></canvas>
 
 <h3>🥧 売上構成</h3>
@@ -23,24 +31,67 @@ const dailySales = {{ daily_sales | tojson }};
 const pieLabels = {{ pie_labels | tojson }};
 const pieData = {{ pie_data | tojson }};
 
-// 折れ線
-new Chart(document.getElementById("lineChart"), {
-    type: "line",
-    data: {
-        labels: dates,
-        datasets: [{
-            label: "売上",
-            data: dailySales
-        }]
+// =========================
+// 📈 折れ線グラフ（強化版）
+// =========================
+let lineChart;
+
+function createLineChart(unit) {
+
+    // 単位変換
+    const converted = dailySales.map(v => v / unit);
+
+    // 最大値
+    const maxValue = Math.max(...converted);
+
+    // 👉 真ん中に来るよう調整
+    const suggestedMax = maxValue * 2;
+
+    // 既存グラフ削除
+    if (lineChart) {
+        lineChart.destroy();
     }
+
+    lineChart = new Chart(document.getElementById("lineChart"), {
+        type: "line",
+        data: {
+            labels: dates,
+            datasets: [{
+                label: `売上（${unit}円単位）`,
+                data: converted,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: suggestedMax
+                }
+            }
+        }
+    });
+}
+
+// 初期表示（100円単位）
+createLineChart(100);
+
+// 単位変更
+document.getElementById("unitSelect").addEventListener("change", function() {
+    createLineChart(Number(this.value));
 });
 
-// 色自動生成
+
+// =========================
+// 🥧 円グラフ
+// =========================
+
+// 色自動生成（商品増えてもOK）
 const colors = pieLabels.map((_, i) =>
     `hsl(${i * 60}, 70%, 60%)`
 );
 
-// 円グラフ
 new Chart(document.getElementById("pieChart"), {
     type: "pie",
     data: {
