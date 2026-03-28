@@ -3,95 +3,92 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>ダッシュボード</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 :root {
-    --bg:#f4f6f9;
-    --card:white;
-    --text:#1a1a1a;
-    --main:#4f46e5;
-    --sub:#06b6d4;
+    --bg: #f4f6f9;
+    --card: white;
+    --text: #1a1a1a;
+    --main: #4f46e5;
+    --sub: #06b6d4;
 }
 
 .dark {
-    --bg:#0f172a;
-    --card:#1e293b;
-    --text:#e2e8f0;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
 }
 
 body {
-    margin:0;
-    background:linear-gradient(135deg,var(--bg),#e2e8f0);
-    color:var(--text);
-    font-family:sans-serif;
+    margin: 0;
+    background: linear-gradient(135deg, var(--bg), #e2e8f0);
+    color: var(--text);
+    font-family: sans-serif;
 }
 
-/* ===== pages ===== */
-.page{display:none;}
-.active{display:block;}
+.page { display:none; }
+.active { display:block; }
 
-/* ===== KPI ===== */
-.kpi{display:flex;gap:10px;padding:10px;}
-.kpi-card{flex:1;padding:15px;border-radius:10px;color:white;}
-.kpi-blue{background:#4f46e5;}
-.kpi-green{background:#10b981;}
+.kpi { display:flex; gap:10px; padding:10px; }
+.kpi-card {
+    flex:1;
+    padding:15px;
+    border-radius:10px;
+    color:white;
+}
+.kpi-blue { background:#4f46e5; }
+.kpi-green { background:#10b981; }
 
-/* ===== cards ===== */
-.card{
-    background:var(--card);
+.card {
+    background: var(--card);
     margin:10px;
     padding:10px;
     border-radius:10px;
-    box-shadow:0 5px 15px rgba(0,0,0,0.1);
 }
 
-/* ===== grid ===== */
-.grid{
+.grid {
     display:grid;
     grid-template-columns:1fr 1fr;
     gap:10px;
 }
 
-/* ===== products ===== */
-.products{
+.products {
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
     gap:10px;
     padding:10px;
 }
 
-.product-card{
-    background:var(--card);
+.product-card {
+    background: var(--card);
     padding:10px;
     border-radius:10px;
 }
 
-.product-card img{
+.product-card img {
     width:100%;
     height:120px;
     object-fit:cover;
     border-radius:8px;
 }
 
-/* ===== buttons ===== */
-button,.btn{
+button, .btn {
     padding:8px 12px;
     border:none;
     border-radius:8px;
     background:linear-gradient(135deg,var(--main),var(--sub));
     color:white;
     cursor:pointer;
-    display:inline-block;
     margin-top:5px;
 }
 
-.delete{background:red;}
+.delete { background:red; }
 
-/* ===== bottom nav ===== */
-.bottom-nav{
+.bottom-nav {
     position:fixed;
     bottom:0;
     width:100%;
@@ -101,14 +98,13 @@ button,.btn{
     padding:10px;
 }
 
-.bottom-nav button{
+.bottom-nav button {
     background:none;
     color:white;
     font-size:18px;
 }
 
-/* ===== toast ===== */
-.toast{
+.toast {
     position:fixed;
     top:20px;
     right:20px;
@@ -119,83 +115,66 @@ button,.btn{
     display:none;
 }
 
-/* ===== canvas ===== */
-canvas{
-    width:100%!important;
-    height:300px!important;
+canvas {
+    width:100% !important;
+    height:300px !important;
 }
 
-/* ===== mobile ===== */
 @media(max-width:600px){
-    .grid{grid-template-columns:1fr;}
-    .kpi{flex-direction:column;}
+    .grid { grid-template-columns:1fr; }
+    .kpi { flex-direction:column; }
 }
 </style>
 </head>
 
 <body>
 
-<div id="toast" class="toast">売れました！</div>
+<div id="toast" class="toast">売上登録しました！</div>
 
 <button onclick="toggleDark()">🌙</button>
 
-<!-- ================= PAGE 1 ================= -->
+<!-- KPI -->
 <div id="page1" class="page active">
-
 <div class="kpi">
-    <div class="kpi-card kpi-blue">
-        <h3>総売上</h3>
-        <p>{{ total_sum }}円</p>
-    </div>
-    <div class="kpi-card kpi-green">
-        <h3>商品数</h3>
-        <p>{{ table_data|length }}</p>
-    </div>
+<div class="kpi-card kpi-blue">
+<h3>総売上</h3>
+<p>{{ total_sum }}円</p>
+</div>
+
+<div class="kpi-card kpi-green">
+<h3>商品数</h3>
+<p>{{ table_data|length }}</p>
+</div>
 </div>
 
 <div class="grid">
-    <div class="card"><canvas id="lineChart"></canvas></div>
-    <div class="card"><canvas id="pieChart"></canvas></div>
+<div class="card"><canvas id="lineChart"></canvas></div>
+<div class="card"><canvas id="pieChart"></canvas></div>
+</div>
 </div>
 
-</div>
-
-<!-- ================= PAGE 2 ================= -->
+<!-- 商品 -->
 <div id="page2" class="page">
 
-<!-- 商品追加 -->
 <div class="card">
-
-<form action="/add" method="POST" enctype="multipart/form-data">
+<form action="/add" method="POST">
 <input name="name" placeholder="商品名">
 <input name="price" placeholder="価格">
 <input name="stock" placeholder="在庫">
-<input type="file" name="images" multiple>
+<input name="image" placeholder="画像URL">
 <button>追加</button>
 </form>
 
-<!-- 通知設定 -->
-<form action="/set_notify" method="POST">
-<select name="notify_type">
-<option value="all">全部通知</option>
-<option value="sell">売上のみ</option>
-<option value="none">OFF</option>
-</select>
-<button>保存</button>
-</form>
-
+<label>
+<input type="checkbox" id="notifyToggle" checked> 通知ON
+</label>
 </div>
 
-<!-- 商品一覧 -->
 <div class="products">
-
 {% for p in table_data %}
 <div class="product-card">
 
-<!-- 画像（最大5枚） -->
-{% for img in p.images %}
-<img src="/{{ img }}">
-{% endfor %}
+<img src="{{ p.image if p.image else 'https://via.placeholder.com/150' }}">
 
 <h3>{{ p.name }}</h3>
 <p>💰 {{ p.price }}円</p>
@@ -207,53 +186,58 @@ canvas{
 
 </div>
 {% endfor %}
-
 </div>
 
 </div>
 
-<!-- ================= NAV ================= -->
 <div class="bottom-nav">
 <button onclick="showPage(1)">📊</button>
 <button onclick="showPage(2)">📦</button>
 </div>
 
 <script>
-const dates = {{ dates | tojson }};
-const dailySales = {{ daily_sales | tojson }};
-const pieLabels = {{ pie_labels | tojson }};
-const pieData = {{ pie_data | tojson }};
+// =======================
+// 🔥 データを1つにまとめる（重要）
+// =======================
+const dashboard = {
+    dates: {{ dates | tojson }},
+    dailySales: {{ daily_sales | tojson }},
+    pieLabels: {{ pie_labels | tojson }},
+    pieData: {{ pie_data | tojson }}
+};
 
+let chart;
+let pieChart;
+
+// ダークモード
 function toggleDark(){
     document.body.classList.toggle("dark");
 }
 
+// ページ切り替え
 function showPage(n){
     document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
     document.getElementById("page"+n).classList.add("active");
 }
 
-// ===== グラデーション付きライン =====
+// グラデーション
 function createGradient(ctx){
-    let g = ctx.createLinearGradient(0,0,0,300);
-    g.addColorStop(0,"rgba(79,70,229,0.5)");
-    g.addColorStop(1,"rgba(79,70,229,0)");
-    return g;
+    let grad = ctx.createLinearGradient(0,0,0,300);
+    grad.addColorStop(0,"rgba(79,70,229,0.5)");
+    grad.addColorStop(1,"rgba(79,70,229,0)");
+    return grad;
 }
 
-let chart;
-
-function createChart(){
-    if(chart) chart.destroy();
-
-    let ctx = document.getElementById("lineChart").getContext("2d");
+// 折れ線グラフ
+function createLineChart(){
+    const ctx = document.getElementById("lineChart").getContext("2d");
 
     chart = new Chart(ctx,{
         type:"line",
         data:{
-            labels:dates,
+            labels:dashboard.dates,
             datasets:[{
-                data:dailySales,
+                data:dashboard.dailySales,
                 borderColor:"#4f46e5",
                 backgroundColor:createGradient(ctx),
                 fill:true,
@@ -262,27 +246,35 @@ function createChart(){
         }
     });
 }
-createChart();
 
-// ===== 円グラフ（見切れ防止） =====
-new Chart(document.getElementById("pieChart"),{
-    type:"pie",
-    data:{
-        labels:pieLabels,
-        datasets:[{data:pieData}]
-    },
-    options:{
-        responsive:true,
-        maintainAspectRatio:false
-    }
-});
+// 円グラフ
+function createPieChart(){
+    const ctx = document.getElementById("pieChart").getContext("2d");
 
-// ===== 売る =====
+    pieChart = new Chart(ctx,{
+        type:"pie",
+        data:{
+            labels:dashboard.pieLabels,
+            datasets:[{data:dashboard.pieData}]
+        },
+        options:{
+            responsive:true,
+            maintainAspectRatio:false
+        }
+    });
+}
+
+createLineChart();
+createPieChart();
+
+// 売る処理
 function sellProduct(id){
     fetch("/sell/"+id).then(()=>{
-        let t=document.getElementById("toast");
-        t.style.display="block";
-        setTimeout(()=>t.style.display="none",1500);
+        if(document.getElementById("notifyToggle").checked){
+            let t=document.getElementById("toast");
+            t.style.display="block";
+            setTimeout(()=>t.style.display="none",1500);
+        }
         location.reload();
     });
 }
