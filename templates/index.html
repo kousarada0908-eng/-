@@ -11,7 +11,6 @@
 
 <h3>📈 売上グラフ</h3>
 
-<!-- ▼ 切り替え -->
 <button onclick="showTotal()">合計</button>
 <button onclick="showProduct()">商品別</button>
 
@@ -21,7 +20,6 @@
     <option value="10000">10000円</option>
 </select>
 
-<!-- ▼ 期間切替 -->
 <select id="modeSelect" onchange="changeMode()">
     <option value="day">日別</option>
     <option value="week">週別</option>
@@ -47,7 +45,6 @@ const pieData = {{ pie_data | tojson }};
 let lineChart;
 let mode = "total";
 
-// 🎨 色生成
 function getColor(i) {
     return `hsl(${i * 60}, 70%, 50%)`;
 }
@@ -60,7 +57,6 @@ function createChart(unit) {
     let allValues = [];
 
     if (mode === "total") {
-
         const converted = dailySales.map(v => v / unit);
         allValues = converted;
 
@@ -74,7 +70,6 @@ function createChart(unit) {
         });
 
     } else {
-
         Object.keys(productDaily).forEach((name, i) => {
             const converted = productDaily[name].map(v => v / unit);
             allValues = allValues.concat(converted);
@@ -83,7 +78,6 @@ function createChart(unit) {
                 label: name,
                 data: converted,
                 borderColor: getColor(i),
-                backgroundColor: getColor(i),
                 fill: false,
                 tension: 0.3
             });
@@ -95,18 +89,12 @@ function createChart(unit) {
 
     lineChart = new Chart(document.getElementById("lineChart"), {
         type: "line",
-        data: {
-            labels: dates,
-            datasets: datasets
-        },
+        data: { labels: dates, datasets: datasets },
         options: {
-            responsive: true,
             plugins: {
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) {
-                            return ctx.raw * unit + "円";
-                        }
+                        label: (ctx) => ctx.raw * unit + "円"
                     }
                 }
             },
@@ -136,7 +124,7 @@ document.getElementById("unitSelect").addEventListener("change", function() {
 
 function changeMode() {
     const m = document.getElementById("modeSelect").value;
-    window.location.href = "/?mode=" + m;
+    location.href = "/?mode=" + m;
 }
 
 createChart(100);
@@ -156,38 +144,64 @@ new Chart(document.getElementById("pieChart"), {
         }]
     }
 });
+
+// 並び替え
+function sortTable(type) {
+    const table = document.getElementById("productTable");
+    const rows = Array.from(table.getElementsByClassName("data-row"));
+
+    let index = {stock:2, sold:3, total:4}[type];
+
+    rows.sort((a, b) => {
+        return Number(b.children[index].innerText) - Number(a.children[index].innerText);
+    });
+
+    rows.forEach(r => table.appendChild(r));
+}
 </script>
+
+<style>
+.data-row:nth-child(even){background:#f9f9f9;}
+.data-row:hover{background:#ffeeba;}
+button{margin:5px;padding:5px 10px;}
+</style>
+
 <hr>
 
 <h3>商品一覧</h3>
 
-<table border="1">
-<tr>
-    <th>商品名</th>
-    <th>単価</th>
-    <th>在庫</th>
-    <th>売れた数</th>
-    <th>売上</th>
-    <th>操作</th>
+<button onclick="sortTable('total')">売上順</button>
+<button onclick="sortTable('stock')">在庫順</button>
+<button onclick="sortTable('sold')">販売数順</button>
+
+<table border="1" id="productTable">
+<tr style="background:#333;color:white;">
+<th>商品名</th><th>単価</th><th>在庫</th><th>売れた数</th><th>売上</th><th>操作</th>
 </tr>
 
 {% for p in table_data %}
-<tr>
-    <td>{{ p.name }}</td>
-    <td>{{ p.price }}</td>
-    <td>{{ p.stock }}</td>
-    <td>{{ p.sold }}</td>
-    <td>{{ p.total }}</td>
-    <td>
-        <a href="/sell/{{ p.id }}">売る</a>
-        <a href="/delete/{{ p.id }}">削除</a>
-    </td>
+<tr class="data-row">
+<td>{{ p.name }}</td>
+<td>{{ p.price }}</td>
+<td>{{ p.stock }}</td>
+<td>{{ p.sold }}</td>
+<td>{{ p.total }}</td>
+<td>
+<a href="/sell/{{ p.id }}">売る</a>
+<a href="/delete/{{ p.id }}">削除</a>
+</td>
 </tr>
 {% endfor %}
 
 <tr>
-    <td colspan="4"><b>合計売上</b></td>
-    <td colspan="2"><b>{{ total_sum }}</b></td>
+<td colspan="4"><b>合計売上</b></td>
+<td colspan="2"><b>{{ total_sum }}</b></td>
 </tr>
-
 </table>
+
+<h3>🏆 売上ランキング</h3>
+<ol>
+{% for r in ranking %}
+<li>{{ r.name }} - {{ r.total }}円</li>
+{% endfor %}
+</ol>

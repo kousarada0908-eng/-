@@ -8,17 +8,11 @@ app.secret_key = "secret"
 
 DB = "app.db"
 
-# =========================
-# DB接続
-# =========================
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
     return conn
 
-# =========================
-# 初期化
-# =========================
 def init_db():
     conn = get_db()
     c = conn.cursor()
@@ -54,9 +48,6 @@ def init_db():
 
 init_db()
 
-# =========================
-# ログイン
-# =========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -72,9 +63,6 @@ def login():
 
     return render_template("login.html")
 
-# =========================
-# 登録
-# =========================
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -88,9 +76,6 @@ def register():
 
     return render_template("register.html")
 
-# =========================
-# メイン
-# =========================
 @app.route("/")
 def index():
     if "user_id" not in session:
@@ -132,15 +117,11 @@ def index():
         names.append(p["name"])
         sold_counts.append(sold)
 
-    # =========================
     # 円グラフ
-    # =========================
     pie_labels = names + ["売れ残り"]
     pie_data = sold_counts + [total_stock]
 
-    # =========================
-    # 集計モード（日 / 週 / 月）
-    # =========================
+    # モード
     mode = request.args.get("mode", "day")
 
     if mode == "month":
@@ -150,9 +131,7 @@ def index():
     else:
         date_format = "%Y-%m-%d"
 
-    # =========================
-    # 合計グラフ
-    # =========================
+    # 合計
     daily = conn.execute(f"""
         SELECT strftime('{date_format}', date) as d, SUM(products.price) as total
         FROM sales
@@ -164,9 +143,7 @@ def index():
     dates = [d["d"] for d in daily]
     daily_sales = [d["total"] for d in daily]
 
-    # =========================
-    # 商品別グラフ（DBから生成）
-    # =========================
+    # 商品別
     product_sales = conn.execute(f"""
         SELECT products.name, strftime('{date_format}', sales.date) as d, SUM(products.price) as total
         FROM sales
@@ -187,11 +164,13 @@ def index():
 
         product_daily[name][d] = total
 
-    # 日付に合わせて整形
     for name in product_daily:
         product_daily[name] = [
             product_daily[name].get(d, 0) for d in dates
         ]
+
+    # ランキング
+    ranking = sorted(table_data, key=lambda x: x["total"], reverse=True)
 
     return render_template(
         "index.html",
@@ -201,12 +180,10 @@ def index():
         daily_sales=daily_sales,
         product_daily=product_daily,
         pie_labels=pie_labels,
-        pie_data=pie_data
+        pie_data=pie_data,
+        ranking=ranking
     )
 
-# =========================
-# 商品追加
-# =========================
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
@@ -220,9 +197,6 @@ def add():
     conn.commit()
     return redirect("/")
 
-# =========================
-# 売る
-# =========================
 @app.route("/sell/<int:id>")
 def sell(id):
     conn = get_db()
@@ -234,9 +208,6 @@ def sell(id):
     conn.commit()
     return redirect("/")
 
-# =========================
-# 削除
-# =========================
 @app.route("/delete/<int:id>")
 def delete(id):
     conn = get_db()
@@ -244,16 +215,12 @@ def delete(id):
     conn.commit()
     return redirect("/")
 
-# =========================
-# CSVダウンロード
-# =========================
 @app.route("/download")
 def download():
     if "user_id" not in session:
         return redirect("/login")
 
     conn = get_db()
-
     data = conn.execute("""
         SELECT products.name, sales.date, products.price
         FROM sales
@@ -269,9 +236,6 @@ def download():
         "Content-Disposition": "attachment; filename=sales.csv"
     }
 
-# =========================
-# 起動
-# =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
