@@ -1,4 +1,148 @@
 <!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>ダッシュボード</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+    --bg: #f4f6f9;
+    --card: white;
+    --text: #1a1a1a;
+    --main: #4f46e5;
+    --sub: #06b6d4;
+}
+
+.dark {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, var(--bg), #e2e8f0);
+    color: var(--text);
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* ===== ページ ===== */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ===== KPI ===== */
+.kpi {
+    display: flex;
+    gap: 15px;
+    margin: 15px;
+}
+
+.kpi-card {
+    flex: 1;
+    padding: 15px;
+    border-radius: 12px;
+    color: white;
+}
+
+.kpi-blue { background: linear-gradient(135deg,#4f46e5,#6366f1); }
+.kpi-green { background: linear-gradient(135deg,#10b981,#34d399); }
+
+/* ===== カード ===== */
+.card {
+    background: var(--card);
+    border-radius: 15px;
+    padding: 15px;
+    margin: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* ===== グリッド ===== */
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* ===== 商品カード ===== */
+.products {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+    gap: 15px;
+    padding: 15px;
+}
+
+.product-card {
+    background: var(--card);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.product-card h3 {
+    margin: 0 0 10px;
+}
+
+/* ===== ボタン ===== */
+button, .btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg,var(--main),var(--sub));
+    color: white;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+.delete {
+    background: red;
+}
+
+/* ===== 下ナビ ===== */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: #0f172a;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+}
+
+.bottom-nav button {
+    background: none;
+    color: white;
+    font-size: 18px;
+}
+
+/* ===== スマホ ===== */
+@media(max-width:600px){
+    .grid { grid-template-columns: 1fr; }
+    .kpi { flex-direction: column; }
+}
+</style>
+</head>
+
+<body>
+
+<button onclick="toggleDark()">🌙</button>
+
+<!-- ===== ページ1（グラフ） ===== -->
+<div id="page1" class="page active">
+
+<div class="kpi">
+    <div class="kpi-card kpi-blue">
+        <h3>総売上</h3>
+        <p>{{ total_sum }}円</p>
+    </div>
+    <div class="kpi-card kpi-green">
+        <h3>商品数</h3>
+        <p>{{ table_data|length }}</p>
     </div>
 </div>
 
@@ -19,6 +163,7 @@
 <p>💰 {{ p.price }}円</p>
 <p>📦 在庫 {{ p.stock }}</p>
 <p>📈 売上 {{ p.total }}</p>
+
 <a href="/sell/{{ p.id }}" class="btn">売る</a>
 <a href="/delete/{{ p.id }}" class="btn delete">削除</a>
 </div>
@@ -27,9 +172,7 @@
 
 </div>
 
-</div>
-
-<!-- ===== 下固定ナビ ===== -->
+<!-- ===== 下ナビ ===== -->
 <div class="bottom-nav">
 <button onclick="showPage(1)">📊</button>
 <button onclick="showPage(2)">📦</button>
@@ -41,35 +184,48 @@ const dailySales = {{ daily_sales | tojson }};
 const pieLabels = {{ pie_labels | tojson }};
 const pieData = {{ pie_data | tojson }};
 
-// ===== ページ切替 =====
-function showPage(n){
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.getElementById('page'+n).classList.add('active');
+let chart;
+
+// ダークモード
+function toggleDark(){
+    document.body.classList.toggle("dark");
 }
 
-// ===== グラフ（プロ仕様） =====
-new Chart(lineChart, {
-    type: "line",
-    data: {
-        labels: dates,
-        datasets: [{
-            data: dailySales,
-            borderColor: "#4f46e5",
-            backgroundColor: "rgba(79,70,229,0.2)",
-            fill: true,
-            tension: 0.4,
-            borderWidth: 3
-        }]
-    },
-    options: {
-        plugins: { legend: { display: false } },
-        scales: {
-            x: { grid: { display: false } },
-            y: { grid: { color: "rgba(0,0,0,0.1)" } }
-        }
-    }
-});
+// ページ切替
+function showPage(n){
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.getElementById("page"+n).classList.add("active");
+}
 
+// グラフ
+function createChart(){
+    if(chart) chart.destroy();
+
+    chart = new Chart(lineChart, {
+        type: "line",
+        data: {
+            labels: dates,
+            datasets: [{
+                data: dailySales,
+                borderColor: "#4f46e5",
+                backgroundColor: "rgba(79,70,229,0.2)",
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: "rgba(0,0,0,0.1)" } }
+            }
+        }
+    });
+}
+createChart();
+
+// 円グラフ
 new Chart(pieChart,{
     type:"pie",
     data:{labels:pieLabels,datasets:[{data:pieData}]}
