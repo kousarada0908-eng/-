@@ -1,11 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #3498db, #8e44ad);
+    font-family: sans-serif;
+}
+
+.card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 300px;
+    text-align: center;
+}
+
+input {
+    width: 100%;
+    margin: 10px 0;
+    padding: 10px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #3498db;
+    color: white;
+    border: none;
+}
+
+a {
+    display: block;
+    margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
 <h2>ログイン</h2>
 
 <form method="POST">
-    <input name="username" placeholder="ユーザー名">
-    <input type="password" name="password" placeholder="パスワード">
-    <button type="submit">ログイン</button>
+<input name="username" placeholder="ユーザー名">
+<input name="password" type="password" placeholder="パスワード">
+<button>ログイン</button>
 </form>
 
-<br>
+<a href="/register">新規登録</a>
+</div>
 
-<a href="/register">新規登録はこちら</a>
+</body>
+</html>
