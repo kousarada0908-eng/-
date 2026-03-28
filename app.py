@@ -8,11 +8,17 @@ app.secret_key = "secret"
 
 DB = "app.db"
 
+# =========================
+# DB接続
+# =========================
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
     return conn
 
+# =========================
+# 初期化
+# =========================
 def init_db():
     conn = get_db()
     c = conn.cursor()
@@ -48,6 +54,9 @@ def init_db():
 
 init_db()
 
+# =========================
+# ログイン
+# =========================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -63,6 +72,9 @@ def login():
 
     return render_template("login.html")
 
+# =========================
+# 登録
+# =========================
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -76,6 +88,9 @@ def register():
 
     return render_template("register.html")
 
+# =========================
+# ダッシュボード
+# =========================
 @app.route("/")
 def index():
     if "user_id" not in session:
@@ -95,6 +110,7 @@ def index():
     total_sum = 0
     total_stock = 0
 
+    # ===== 商品ループ =====
     for p in products:
         sold = conn.execute(
             "SELECT COUNT(*) FROM sales WHERE product_id=?",
@@ -117,11 +133,15 @@ def index():
         names.append(p["name"])
         sold_counts.append(sold)
 
+    # =========================
     # 円グラフ
+    # =========================
     pie_labels = names + ["売れ残り"]
     pie_data = sold_counts + [total_stock]
 
-    # モード
+    # =========================
+    # 日別 / 週別 / 月別
+    # =========================
     mode = request.args.get("mode", "day")
 
     if mode == "month":
@@ -131,26 +151,32 @@ def index():
     else:
         date_format = "%Y-%m-%d"
 
-    # 合計
+    # =========================
+    # 合計グラフ
+    # =========================
     daily = conn.execute(f"""
-        SELECT strftime('{date_format}', date) as d, SUM(products.price) as total
+        SELECT strftime('{date_format}', sales.date) as d, SUM(products.price) as total
         FROM sales
         JOIN products ON sales.product_id = products.id
+        WHERE products.user_id=?
         GROUP BY d
         ORDER BY d
-    """).fetchall()
+    """, (session["user_id"],)).fetchall()
 
     dates = [d["d"] for d in daily]
-    daily_sales = [d["total"] for d in daily]
+    daily_sales = [d["total"] or 0 for d in daily]
 
-    # 商品別
+    # =========================
+    # 商品別グラフ
+    # =========================
     product_sales = conn.execute(f"""
         SELECT products.name, strftime('{date_format}', sales.date) as d, SUM(products.price) as total
         FROM sales
         JOIN products ON sales.product_id = products.id
+        WHERE products.user_id=?
         GROUP BY products.name, d
         ORDER BY d
-    """).fetchall()
+    """, (session["user_id"],)).fetchall()
 
     product_daily = {}
 
@@ -169,8 +195,12 @@ def index():
             product_daily[name].get(d, 0) for d in dates
         ]
 
+    # =========================
     # ランキング
+    # =========================
     ranking = sorted(table_data, key=lambda x: x["total"], reverse=True)
+
+    conn.close()
 
     return render_template(
         "index.html",
@@ -184,6 +214,9 @@ def index():
         ranking=ranking
     )
 
+# =========================
+# 商品追加
+# =========================
 @app.route("/add", methods=["POST"])
 def add():
     if "user_id" not in session:
@@ -195,26 +228,49 @@ def add():
         (session["user_id"], request.form["name"], int(request.form["price"]), int(request.form["stock"]))
     )
     conn.commit()
+    conn.close()
     return redirect("/")
 
+# =========================
+# 売上登録
+# =========================
 @app.route("/sell/<int:id>")
 def sell(id):
     conn = get_db()
-    conn.execute("UPDATE products SET stock = stock - 1 WHERE id=?", (id,))
-    conn.execute(
-        "INSERT INTO sales (product_id, date) VALUES (?, ?)",
-        (id, datetime.now().strftime("%Y-%m-%d"))
-    )
+
+    # 在庫チェック（改善ポイント）
+    stock = conn.execute(
+        "SELECT stock FROM products WHERE id=?", (id,)
+    ).fetchone()["stock"]
+
+    if stock > 0:
+        conn.execute("UPDATE products SET stock = stock - 1 WHERE id=?", (id,))
+        conn.execute(
+            "INSERT INTO sales (product_id, date) VALUES (?, ?)",
+            (id, datetime.now().strftime("%Y-%m-%d"))
+        )
+
     conn.commit()
+    conn.close()
     return redirect("/")
 
+# =========================
+# 削除
+# =========================
 @app.route("/delete/<int:id>")
 def delete(id):
     conn = get_db()
+
+    conn.execute("DELETE FROM sales WHERE product_id=?", (id,))
     conn.execute("DELETE FROM products WHERE id=?", (id,))
+
     conn.commit()
+    conn.close()
     return redirect("/")
 
+# =========================
+# CSVダウンロード（ユーザー別に修正済み）
+# =========================
 @app.route("/download")
 def download():
     if "user_id" not in session:
@@ -225,20 +281,20 @@ def download():
         SELECT products.name, sales.date, products.price
         FROM sales
         JOIN products ON sales.product_id = products.id
-    """).fetchall()
+        WHERE products.user_id=?
+    """, (session["user_id"],)).fetchall()
 
     csv_data = "商品名,日付,価格\n"
     for row in data:
         csv_data += f"{row['name']},{row['date']},{row['price']}\n"
+
+    conn.close()
 
     return csv_data, 200, {
         "Content-Type": "text/csv",
         "Content-Disposition": "attachment; filename=sales.csv"
     }
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
 # =========================
 # ログアウト
 # =========================
@@ -246,3 +302,10 @@ if __name__ == "__main__":
 def logout():
     session.clear()
     return redirect("/login")
+
+# =========================
+# 起動
+# =========================
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
