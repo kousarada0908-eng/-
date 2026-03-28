@@ -157,3 +157,37 @@ new Chart(document.getElementById("pieChart"), {
     }
 });
 </script>
+<hr>
+
+<h3>商品一覧</h3>
+
+<table border="1">
+<tr>
+    <th>商品名</th>
+    <th>単価</th>
+    <th>在庫</th>
+    <th>売れた数</th>
+    <th>売上</th>
+    <th>操作</th>
+</tr>
+
+{% for p in table_data %}
+<tr>
+    <td>{{ p.name }}</td>
+    <td>{{ p.price }}</td>
+    <td>{{ p.stock }}</td>
+    <td>{{ p.sold }}</td>
+    <td>{{ p.total }}</td>
+    <td>
+        <a href="/sell/{{ p.id }}">売る</a>
+        <a href="/delete/{{ p.id }}">削除</a>
+    </td>
+</tr>
+{% endfor %}
+
+<tr>
+    <td colspan="4"><b>合計売上</b></td>
+    <td colspan="2"><b>{{ total_sum }}</b></td>
+</tr>
+
+</table>
