@@ -1,59 +1,38 @@
-<html lang="ja">
-
-<!-- メイン -->
-<div class="main">
-
-<!-- KPI -->
-<div class="kpi">
-    <div class="kpi-card">
-        <h3>総売上</h3>
-        <p>{{ total_sum }}円</p>
-    </div>
-    <div class="kpi-card">
-        <h3>商品数</h3>
-        <p>{{ table_data|length }}</p>
+<!DOCTYPE html>
     </div>
 </div>
 
-<!-- 追加ボタン -->
-<button onclick="openModal()">＋ 商品追加</button>
-
-<!-- グラフ -->
 <div class="grid">
     <div class="card"><canvas id="lineChart"></canvas></div>
     <div class="card"><canvas id="pieChart"></canvas></div>
 </div>
 
-<!-- テーブル -->
-<div class="card">
-<table>
-<tr><th>商品名</th><th>価格</th><th>在庫</th><th>売上</th></tr>
+</div>
+
+<!-- ===== ページ2（商品一覧） ===== -->
+<div id="page2" class="page">
+
+<div class="products">
 {% for p in table_data %}
-<tr>
-<td>{{ p.name }}</td>
-<td>{{ p.price }}</td>
-<td>{{ p.stock }}</td>
-<td>{{ p.total }}</td>
-</tr>
+<div class="product-card">
+<h3>{{ p.name }}</h3>
+<p>💰 {{ p.price }}円</p>
+<p>📦 在庫 {{ p.stock }}</p>
+<p>📈 売上 {{ p.total }}</p>
+<a href="/sell/{{ p.id }}" class="btn">売る</a>
+<a href="/delete/{{ p.id }}" class="btn delete">削除</a>
+</div>
 {% endfor %}
-</table>
 </div>
 
 </div>
+
 </div>
 
-<!-- モーダル -->
-<div class="modal" id="modal">
-<div class="modal-content">
-<h3>商品追加</h3>
-<form action="/add" method="POST">
-<input name="name" placeholder="商品名"><br>
-<input name="price" placeholder="価格"><br>
-<input name="stock" placeholder="在庫"><br>
-<button>追加</button>
-</form>
-<button onclick="closeModal()">閉じる</button>
-</div>
+<!-- ===== 下固定ナビ ===== -->
+<div class="bottom-nav">
+<button onclick="showPage(1)">📊</button>
+<button onclick="showPage(2)">📦</button>
 </div>
 
 <script>
@@ -62,6 +41,13 @@ const dailySales = {{ daily_sales | tojson }};
 const pieLabels = {{ pie_labels | tojson }};
 const pieData = {{ pie_data | tojson }};
 
+// ===== ページ切替 =====
+function showPage(n){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page'+n).classList.add('active');
+}
+
+// ===== グラフ（プロ仕様） =====
 new Chart(lineChart, {
     type: "line",
     data: {
@@ -71,8 +57,16 @@ new Chart(lineChart, {
             borderColor: "#4f46e5",
             backgroundColor: "rgba(79,70,229,0.2)",
             fill: true,
-            tension: 0.4
+            tension: 0.4,
+            borderWidth: 3
         }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "rgba(0,0,0,0.1)" } }
+        }
     }
 });
 
@@ -80,13 +74,6 @@ new Chart(pieChart,{
     type:"pie",
     data:{labels:pieLabels,datasets:[{data:pieData}]}
 });
-
-function openModal(){
-    modal.style.display = "flex";
-}
-function closeModal(){
-    modal.style.display = "none";
-}
 </script>
 
 </body>
