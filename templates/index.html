@@ -12,62 +12,81 @@
 :root {
     --bg: #f4f6f9;
     --card: white;
-    --text: black;
+    --text: #1a1a1a;
+    --main: #4f46e5;
+    --sub: #06b6d4;
 }
 
 .dark {
-    --bg: #1e1e1e;
-    --card: #2c2c2c;
-    --text: white;
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e2e8f0;
 }
 
 body {
     margin: 0;
-    background: var(--bg);
+    background: linear-gradient(135deg, var(--bg), #e2e8f0);
     color: var(--text);
-    font-family: sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
 
-/* ヘッダー */
 .header {
-    background: #2c3e50;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
     color: white;
-    padding: 15px;
+    padding: 18px;
     text-align: center;
-    position: relative;
+    position: sticky;
+    top: 0;
 }
 
-/* ログアウト */
 .logout {
     position: absolute;
     right: 15px;
     top: 15px;
+    text-decoration: none;
+    color: white;
+    background: rgba(255,255,255,0.1);
+    padding: 6px 10px;
+    border-radius: 8px;
 }
 
-/* コンテナ */
 .container {
-    padding: 15px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
 }
 
-/* カード */
 .card {
     background: var(--card);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    transition: 0.3s;
 }
 
-/* ボタン */
+.card:hover {
+    transform: translateY(-5px);
+}
+
 button {
-    padding: 8px 12px;
+    padding: 10px 16px;
     margin: 5px;
     border: none;
-    border-radius: 6px;
-    background: #3498db;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--main), var(--sub));
     color: white;
+    font-weight: bold;
+    cursor: pointer;
 }
 
-/* テーブル */
+input, select {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -90,11 +109,9 @@ tr:nth-child(even) {
     background: #444;
 }
 
-/* スマホ */
 @media(max-width:600px){
-    table, tr, td {
-        display:block;
-    }
+    button { width: 100%; }
+    table, tr, td { display:block; }
 }
 </style>
 </head>
@@ -108,10 +125,8 @@ tr:nth-child(even) {
 
 <div class="container">
 
-<!-- ダークモード -->
 <button onclick="toggleDark()">🌙 ダークモード</button>
 
-<!-- 追加 -->
 <div class="card">
 <form action="/add" method="POST">
 <input name="name" placeholder="商品名">
@@ -121,7 +136,6 @@ tr:nth-child(even) {
 </form>
 </div>
 
-<!-- グラフ -->
 <div class="card">
 <h3>📈 売上</h3>
 
@@ -143,13 +157,11 @@ tr:nth-child(even) {
 <canvas id="lineChart"></canvas>
 </div>
 
-<!-- 円グラフ -->
 <div class="card">
 <h3>🥧 売上構成</h3>
 <canvas id="pieChart"></canvas>
 </div>
 
-<!-- テーブル -->
 <div class="card">
 <h3>商品一覧</h3>
 
@@ -170,7 +182,6 @@ tr:nth-child(even) {
 </table>
 </div>
 
-<!-- ランキング -->
 <div class="card">
 <h3>🏆 ランキング</h3>
 <ol>
@@ -185,19 +196,17 @@ tr:nth-child(even) {
 <script>
 const dates = {{ dates | tojson }};
 const dailySales = {{ daily_sales | tojson }};
-const productDaily = {{ product_daily | tojson }};
 const pieLabels = {{ pie_labels | tojson }};
 const pieData = {{ pie_data | tojson }};
 
 let chart;
-let mode = "total";
 
 // ダークモード
 function toggleDark(){
     document.body.classList.toggle("dark");
 }
 
-// グラフ
+// ===== 折れ線グラフ（改良版） =====
 function createChart(){
     if(chart) chart.destroy();
 
@@ -208,13 +217,31 @@ function createChart(){
             datasets: [{
                 label: "売上",
                 data: dailySales,
-                borderColor: "blue",
-                fill: false
+                borderColor: "#4f46e5",
+                backgroundColor: "rgba(79,70,229,0.2)",
+                fill: true,
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 3
             }]
         },
         options: {
+            responsive: true,
             animation: {
                 duration: 1500
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    grid: { color: "rgba(0,0,0,0.1)" }
+                }
             }
         }
     });
