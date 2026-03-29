@@ -1,33 +1,18 @@
 import os
-import json
-import smtplib
-from email.mime.text import MIMEText
-from flask import Flask, render_template, request, redirect, session
 import sqlite3
+from flask import Flask, render_template, request, redirect, session, url_for, flash
 from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "secret"
-
 DB = "app.db"
 
-# ===== メール送信 =====
-def send_mail(to_email, message):
-    msg = MIMEText(message)
-    msg["Subject"] = "売上通知"
-    msg["From"] = to_email
-    msg["To"] = to_email
 
-    server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-    server.login(to_email, session.get("email_pass"))  # ←注意
-    server.send_message(msg)
-    server.quit()
-
-# ===== DB =====
 def get_db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def init_db():
     conn = get_db()
@@ -36,19 +21,20 @@ def init_db():
     c.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT,
-        email_pass TEXT,
-        notify_type TEXT DEFAULT 'all'
+        username TEXT,
+        password TEXT,
+        email TEXT
     )
     """)
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
         name TEXT,
         price INTEGER,
         stock INTEGER,
-        images TEXT
+        image TEXT
     )
     """)
 
@@ -63,110 +49,173 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 init_db()
 
-# ===== ホーム =====
+
+# =====================
+# ログイン
+# =====================
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        conn = get_db()
+        user = conn.execute(
+            "SELECT * FROM users WHERE username=? AND password=?",
+            (request.form.get("username"), request.form.get("password"))
+        ).fetchone()
+
+        if user:
+            session["user_id"] = user["id"]
+            return redirect("/")
+        else:
+            flash("ログイン失敗")
+
+    return render_template("login/login.html")
+
+
+# =====================
+# 登録
+# =====================
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO users (username, password, email) VALUES (?, ?, ?)",
+            (
+                request.form.get("username"),
+                request.form.get("password"),
+                request.form.get("email")
+            )
+        )
+        conn.commit()
+        return redirect("/login")
+
+    return render_template("login/register.html")
+
+
+# =====================
+# ダッシュボード
+# =====================
 @app.route("/")
 def index():
+    if "user_id" not in session:
+        return redirect("/login")
+
     conn = get_db()
 
-    products = conn.execute("SELECT * FROM products").fetchall()
+    products = conn.execute(
+        "SELECT * FROM products WHERE user_id=?",
+        (session["user_id"],)
+    ).fetchall()
 
     table_data = []
+    names = []
+    sold_counts = []
+
+    total_sum = 0
+
     for p in products:
         sold = conn.execute(
             "SELECT COUNT(*) FROM sales WHERE product_id=?",
             (p["id"],)
         ).fetchone()[0]
 
+        total = sold * p["price"]
+        total_sum += total
+
         table_data.append({
             "id": p["id"],
             "name": p["name"],
             "price": p["price"],
             "stock": p["stock"],
-            "total": sold * p["price"],
-            "images": json.loads(p["images"]) if p["images"] else []
+            "total": total,
+            "image": p["image"]
         })
 
-    return render_template("index.html", table_data=table_data)
+        names.append(p["name"])
+        sold_counts.append(sold)
 
-# ===== ユーザー登録 =====
-@app.route("/register", methods=["POST"])
-def register():
+    pie_labels = names
+    pie_data = sold_counts
+
+    daily = conn.execute("""
+        SELECT date, SUM(products.price) as total
+        FROM sales
+        JOIN products ON sales.product_id = products.id
+        GROUP BY date
+        ORDER BY date
+    """).fetchall()
+
+    dates = [d["date"] for d in daily]
+    daily_sales = [d["total"] for d in daily]
+
+    return render_template(
+        "index.html",
+        table_data=table_data,
+        total_sum=total_sum,
+        dates=dates,
+        daily_sales=daily_sales,
+        pie_labels=pie_labels,
+        pie_data=pie_data
+    )
+
+
+# =====================
+# 商品追加
+# =====================
+@app.route("/add", methods=["POST"])
+def add():
     conn = get_db()
     conn.execute(
-        "INSERT INTO users (email, email_pass) VALUES (?, ?)",
-        (request.form["email"], request.form["email_pass"])
+        "INSERT INTO products (user_id, name, price, stock, image) VALUES (?, ?, ?, ?, ?)",
+        (
+            session["user_id"],
+            request.form.get("name"),
+            int(request.form.get("price")),
+            int(request.form.get("stock")),
+            request.form.get("image")
+        )
     )
     conn.commit()
     return redirect("/")
 
-# ===== 売る =====
+
+# =====================
+# 売る
+# =====================
 @app.route("/sell/<int:id>")
 def sell(id):
     conn = get_db()
-
-    product = conn.execute("SELECT * FROM products WHERE id=?", (id,)).fetchone()
-
     conn.execute("UPDATE products SET stock = stock - 1 WHERE id=?", (id,))
     conn.execute(
         "INSERT INTO sales (product_id, date) VALUES (?, ?)",
         (id, datetime.now().strftime("%Y-%m-%d"))
     )
     conn.commit()
-
-    # ユーザー取得
-    user = conn.execute("SELECT * FROM users ORDER BY id DESC LIMIT 1").fetchone()
-
-    if user and user["notify_type"] != "none":
-        send_mail(user["email"], f"{product['name']} が売れました！")
-
-    return "", 204
-
-# ===== 通知設定 =====
-@app.route("/set_notify", methods=["POST"])
-def set_notify():
-    conn = get_db()
-    conn.execute(
-        "UPDATE users SET notify_type=? ORDER BY id DESC LIMIT 1",
-        (request.form["notify_type"],)
-    )
-    conn.commit()
     return redirect("/")
 
-# ===== 商品追加 =====
-@app.route("/add", methods=["POST"])
-def add():
-    files = request.files.getlist("images")
 
-    paths = []
-    for f in files[:5]:
-        if f.filename:
-            path = os.path.join("static/uploads", f.filename)
-            f.save(path)
-            paths.append(path)
-
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO products (name, price, stock, images) VALUES (?, ?, ?, ?)",
-        (
-            request.form["name"],
-            int(request.form["price"]),
-            int(request.form["stock"]),
-            json.dumps(paths)
-        )
-    )
-    conn.commit()
-
-    return redirect("/")
-
-# ===== 削除 =====
+# =====================
+# 削除
+# =====================
 @app.route("/delete/<int:id>")
 def delete(id):
     conn = get_db()
     conn.execute("DELETE FROM products WHERE id=?", (id,))
     conn.commit()
     return redirect("/")
+
+
+# =====================
+# ログアウト
+# =====================
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
