@@ -1,10 +1,11 @@
 import os
 import sqlite3
-from flask import Flask, render_template, request, redirect, session, url_for, flash
+from flask import Flask, render_template, request, redirect, session
 from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "secret"
+
 DB = "app.db"
 
 
@@ -18,6 +19,7 @@ def init_db():
     conn = get_db()
     c = conn.cursor()
 
+    # ユーザー
     c.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,6 +29,7 @@ def init_db():
     )
     """)
 
+    # 商品
     c.execute("""
     CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +41,7 @@ def init_db():
     )
     """)
 
+    # 売上
     c.execute("""
     CREATE TABLE IF NOT EXISTS sales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +55,6 @@ def init_db():
 
 
 init_db()
-
 
 # =====================
 # ログイン
@@ -69,7 +72,7 @@ def login():
             session["user_id"] = user["id"]
             return redirect("/")
         else:
-            flash("ログイン失敗")
+            return "ログイン失敗"
 
     return render_template("login/login.html")
 
@@ -96,7 +99,7 @@ def register():
 
 
 # =====================
-# ダッシュボード
+# ホーム
 # =====================
 @app.route("/")
 def index():
@@ -122,24 +125,22 @@ def index():
             (p["id"],)
         ).fetchone()[0]
 
-        total = sold * p["price"]
+        total = sold * (p["price"] or 0)
         total_sum += total
 
         table_data.append({
             "id": p["id"],
             "name": p["name"],
-            "price": p["price"],
-            "stock": p["stock"],
+            "price": p["price"] or 0,
+            "stock": p["stock"] or 0,
             "total": total,
-            "image": p["image"]
+            "image": p["image"] or ""
         })
 
         names.append(p["name"])
         sold_counts.append(sold)
 
-    pie_labels = names
-    pie_data = sold_counts
-
+    # グラフ用
     daily = conn.execute("""
         SELECT date, SUM(products.price) as total
         FROM sales
@@ -157,8 +158,8 @@ def index():
         total_sum=total_sum,
         dates=dates,
         daily_sales=daily_sales,
-        pie_labels=pie_labels,
-        pie_data=pie_data
+        pie_labels=names,
+        pie_data=sold_counts
     )
 
 
@@ -168,15 +169,15 @@ def index():
 @app.route("/add", methods=["POST"])
 def add():
     conn = get_db()
+
+    name = request.form.get("name")
+    price = int(request.form.get("price") or 0)
+    stock = int(request.form.get("stock") or 0)
+    image = request.form.get("image") or ""
+
     conn.execute(
         "INSERT INTO products (user_id, name, price, stock, image) VALUES (?, ?, ?, ?, ?)",
-        (
-            session["user_id"],
-            request.form.get("name"),
-            int(request.form.get("price")),
-            int(request.form.get("stock")),
-            request.form.get("image")
-        )
+        (session["user_id"], name, price, stock, image)
     )
     conn.commit()
     return redirect("/")
